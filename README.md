@@ -8,8 +8,7 @@ MÔ TẢ:
   
   Bài đăng tin được lưu dưới dạng: Mã bài đăng, tiêu đề, địa chỉ, diện tích, giá phòng, hình ảnh, nội thất, trạng thái và loại hình phòng cho thuê. Nếu trạng thái người dùng vẫn chưa tìm được phòng ở, hệ thống sẽ gợi ý thông báo những phòng trọ người dùng đã lưu vẫn còn trống để nhắc nhở người dùng, hoặc gợi ý những phòng trọ còn chỗ tại nơi đã tìm. Khi người dùng đã lựa chọn được phòng trọ mong muốn có thể liên hệ với người cho thuê để trao đổi thêm thông tin phòng trọ như hợp đồng thuê, tiền cọc, biên bản bàn giao tài sản, hợp đồng dịch vụ như điện, nước, chi phí quản lý, vệ sinh, internet,…(nếu có). Khi người dùng đã hoàn tất việc thỏa thuận thì chủ cho thuê có thay đổi trạng thái phòng trống ở thông tin đăng bài.
 
-
-## 🚀 Công nghệ sử dụng
+Công nghệ sử dụng
 - **Next.js 14** (Frontend Framework)
 - **Supabase** (Database, Auth, Realtime)
 - **Tailwind CSS** (Styling)
