@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/lib/supabaseClient'
 
 // 1. Định nghĩa kiểu dữ liệu để TypeScript hiểu cấu trúc bảng Rooms của Nga
 interface Room {
