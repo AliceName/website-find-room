@@ -57,3 +57,13 @@ export const addAmenities = async (amenityName: string) => {
 };
 
 //5.
+// Sửa thông tin loại tiện nghi trong hệ thống
+export const editSystemAmenity = async (amenityId: string, newName: string) => {
+  const { data, error } = await supabase
+    .from("Amenities")
+    .update({ amenity_name: newName }) // Cập nhật tên mới
+    .eq("amenity_id", amenityId) // Theo ID cụ thể
+    .select();
+
+  return { data, error };
+};
