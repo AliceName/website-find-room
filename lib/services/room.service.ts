@@ -1,4 +1,4 @@
-import { supabase } from '../supabaseClient';
+import { supabase } from "../supabaseClient";
 
 export interface Room {
     id: string;
@@ -20,9 +20,9 @@ export class RoomService {
     // Lấy tất cả phòng
     static async getAllRooms(): Promise<Room[]> {
         const { data, error } = await supabase
-            .from('rooms')
-            .select('*')
-            .order('created_at', { ascending: false });
+            .from("rooms")
+            .select("*")
+            .order("created_at", { ascending: false });
 
         if (error) {
             throw new Error(`Lỗi khi lấy danh sách phòng: ${error.message}`);
@@ -34,13 +34,13 @@ export class RoomService {
     // Lấy phòng theo ID
     static async getRoomById(id: string): Promise<Room | null> {
         const { data, error } = await supabase
-            .from('rooms')
-            .select('*')
-            .eq('id', id)
+            .from("rooms")
+            .select("*")
+            .eq("id", id)
             .single();
 
         if (error) {
-            if (error.code === 'PGRST116') {
+            if (error.code === "PGRST116") {
                 return null; // Không tìm thấy
             }
             throw new Error(`Lỗi khi lấy phòng: ${error.message}`);
@@ -52,10 +52,10 @@ export class RoomService {
     // Lấy phòng theo user_id (phòng của người dùng)
     static async getRoomsByUser(userId: string): Promise<Room[]> {
         const { data, error } = await supabase
-            .from('rooms')
-            .select('*')
-            .eq('user_id', userId)
-            .order('created_at', { ascending: false });
+            .from("rooms")
+            .select("*")
+            .eq("user_id", userId)
+            .order("created_at", { ascending: false });
 
         if (error) {
             throw new Error(`Lỗi khi lấy phòng của người dùng: ${error.message}`);
@@ -65,9 +65,11 @@ export class RoomService {
     }
 
     // Tạo phòng mới
-    static async createRoom(room: Omit<Room, 'id' | 'created_at' | 'updated_at'>): Promise<Room> {
+    static async createRoom(
+        room: Omit<Room, "id" | "created_at" | "updated_at">,
+    ): Promise<Room> {
         const { data, error } = await supabase
-            .from('rooms')
+            .from("rooms")
             .insert(room)
             .select()
             .single();
@@ -80,11 +82,14 @@ export class RoomService {
     }
 
     // Cập nhật phòng
-    static async updateRoom(id: string, updates: Partial<Omit<Room, 'id' | 'created_at' | 'updated_at'>>): Promise<Room> {
+    static async updateRoom(
+        id: string,
+        updates: Partial<Omit<Room, "id" | "created_at" | "updated_at">>,
+    ): Promise<Room> {
         const { data, error } = await supabase
-            .from('rooms')
+            .from("rooms")
             .update(updates)
-            .eq('id', id)
+            .eq("id", id)
             .select()
             .single();
 
@@ -97,10 +102,7 @@ export class RoomService {
 
     // Xóa phòng
     static async deleteRoom(id: string): Promise<void> {
-        const { error } = await supabase
-            .from('rooms')
-            .delete()
-            .eq('id', id);
+        const { error } = await supabase.from("rooms").delete().eq("id", id);
 
         if (error) {
             throw new Error(`Lỗi khi xóa phòng: ${error.message}`);
@@ -110,10 +112,10 @@ export class RoomService {
     // Tìm kiếm phòng theo tiêu đề hoặc mô tả
     static async searchRooms(query: string): Promise<Room[]> {
         const { data, error } = await supabase
-            .from('rooms')
-            .select('*')
+            .from("rooms")
+            .select("*")
             .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
-            .order('created_at', { ascending: false });
+            .order("created_at", { ascending: false });
 
         if (error) {
             throw new Error(`Lỗi khi tìm kiếm phòng: ${error.message}`);
@@ -125,10 +127,10 @@ export class RoomService {
     // Lấy phòng theo vị trí
     static async getRoomsByLocation(locationId: string): Promise<Room[]> {
         const { data, error } = await supabase
-            .from('rooms')
-            .select('*')
-            .eq('location_id', locationId)
-            .order('created_at', { ascending: false });
+            .from("rooms")
+            .select("*")
+            .eq("location_id", locationId)
+            .order("created_at", { ascending: false });
 
         if (error) {
             throw new Error(`Lỗi khi lấy phòng theo vị trí: ${error.message}`);
@@ -138,19 +140,24 @@ export class RoomService {
     }
 
     // Lấy phòng có sẵn trong khoảng thời gian
-    static async getAvailableRooms(fromDate: string, toDate?: string): Promise<Room[]> {
+    static async getAvailableRooms(
+        fromDate: string,
+        toDate?: string,
+    ): Promise<Room[]> {
         let query = supabase
-            .from('rooms')
-            .select('*')
-            .lte('available_from', fromDate);
+            .from("rooms")
+            .select("*")
+            .lte("available_from", fromDate);
 
         if (toDate) {
             query = query.or(`available_to.is.null,available_to.gte.${toDate}`);
         } else {
-            query = query.is('available_to', null);
+            query = query.is("available_to", null);
         }
 
-        const { data, error } = await query.order('created_at', { ascending: false });
+        const { data, error } = await query.order("created_at", {
+            ascending: false,
+        });
 
         if (error) {
             throw new Error(`Lỗi khi lấy phòng có sẵn: ${error.message}`);
@@ -160,13 +167,16 @@ export class RoomService {
     }
 
     // Lấy phòng theo khoảng giá
-    static async getRoomsByPriceRange(minPrice: number, maxPrice: number): Promise<Room[]> {
+    static async getRoomsByPriceRange(
+        minPrice: number,
+        maxPrice: number,
+    ): Promise<Room[]> {
         const { data, error } = await supabase
-            .from('rooms')
-            .select('*')
-            .gte('price', minPrice)
-            .lte('price', maxPrice)
-            .order('price');
+            .from("rooms")
+            .select("*")
+            .gte("price", minPrice)
+            .lte("price", maxPrice)
+            .order("price");
 
         if (error) {
             throw new Error(`Lỗi khi lấy phòng theo giá: ${error.message}`);
