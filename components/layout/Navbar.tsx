@@ -1,10 +1,33 @@
 "use client"
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function Navbar() {
+  const router = useRouter();
   const [showFilter, setShowFilter] = useState(false); // Điều khiển hiện/ẩn bộ lọc
   const [showMap, setShowMap] = useState(false); // State để mở bản đồ
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => authListener?.subscription?.unsubscribe();
+  }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    router.push("/");
+  };
+
   return (
     <nav className="bg-white shadow-md sticky top-0 z-[50]">
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-3">
@@ -33,8 +56,30 @@ export default function Navbar() {
           {/* MENU DESKTOP */}
           <ul className="hidden lg:flex space-x-6 text-gray-600 font-bold text-sm uppercase">
             <li><Link href="/">Trang chủ</Link></li>
-            <li><Link href="/post">Đăng tin</Link></li>
-            <li><Link href="/login">Đăng nhập</Link></li>
+            {!user && <li><Link href="/post">Đăng tin</Link></li>}
+            {user ? (
+              <li className="flex items-center gap-3">
+                <Link href="/post" className="text-gray-600 hover:text-blue-700">Đăng tin</Link>
+                <span className="text-gray-300">|</span>
+                <Link href="/manage-posts" className="text-blue-600 hover:text-blue-700">Quản lý bài đăng</Link>
+                <span className="text-gray-300">|</span>
+                <Link href="/profile" className="text-blue-600 hover:text-blue-700">Hồ sơ</Link>
+                <span className="text-gray-300">|</span>
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="text-blue-600 hover:text-blue-700"
+                >
+                  ĐĂNG XUẤT
+                </button>
+              </li>
+            ) : (
+              <li className="flex items-center gap-2">
+                <Link href="/auth/login" className="text-blue-600 hover:text-blue-700">Đăng nhập</Link>
+                <span className="text-gray-300">|</span>
+                <Link href="/auth/register" className="text-blue-600 hover:text-blue-700">Đăng ký</Link>
+              </li>
+            )}
           </ul>
         </div>
 
