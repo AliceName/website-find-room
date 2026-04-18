@@ -1,20 +1,24 @@
 import RoomGallery from '@/components/rooms/RoomGallery'
 import { supabase } from '@/lib/supabaseClient'
 import { notFound } from 'next/navigation'
-import Image from 'next/image'
 import { Database } from '@/types/supabase'
 import '@/app/globals.css'
+import Rating from '@/components/common/rating'
+import CommentInput from "@/components/rooms/CommentInput";
 
 type PostDetail = Database['public']['Tables']['posts']['Row'] & {
     rooms: (Database['public']['Tables']['rooms']['Row'] & {
         room_types: { room_type_name: string } | null;
         roomimages: { image_url: string; is_360: boolean }[];
+        // Cấu trúc trả về thường là một mảng object chứa object con
+        roomamenities: { amenity: { amenity_name: string } }[];
     }) | null;
 };
 
-export default async function RoomDetailPage({ params }: { params: Promise<{ post_id: string }> }) {
-    const { post_id } = await params;
 
+export default async function RoomDetailPage({ params }: { params: Promise<{ post_id: string }> }) {
+
+    const { post_id } = await params;
     // Truy vấn theo post_id duy nhất
     const { data, error } = await supabase
         .from('posts')
@@ -23,7 +27,10 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ pos
       rooms:room_id (
         *,
         room_types:room_type_id ( room_type_name ),
-        roomimages ( image_url, is_360 )
+        roomimages ( image_url, is_360 ),
+        roomamenities ( 
+          amenity:amenity_id ( amenity_name ) 
+        )
       )
     `)
         .eq('post_id', post_id)
@@ -104,40 +111,53 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ pos
                                     👤
                                 </div>
                                 <div>
-                                    <p className="text-blue-400 text-[10px] font-black uppercase tracking-widest">Hỗ trợ sinh viên</p>
+                                    <p className="text-blue-400 text-[10px] font-black uppercase tracking-widest font-sans">Hỗ trợ sinh viên</p>
                                     <h4 className="font-bold text-xl">Chủ sở hữu tin đăng</h4>
                                 </div>
                             </div>
 
                             <div className="space-y-4">
-                                <button className="w-full bg-blue-600 hover:bg-blue-500 py-6 rounded-2xl font-black text-xl transition-all shadow-lg active:scale-95 flex items-center justify-center gap-4">
+                                <button className="w-full bg-blue-600 hover:bg-blue-500 py-6 rounded-2xl font-black text-xl transition-all border border-white/10 flex items-center justify-center gap-4 font-sans">
                                     <span>📞</span> GỌI CHỦ TRỌ
                                 </button>
-                                <button className="w-full bg-white/10 hover:bg-white/20 py-6 rounded-2xl font-black text-xl transition-all border border-white/10 flex items-center justify-center gap-4">
+                                <button className="w-full bg-white/10 hover:bg-white/20 py-6 rounded-2xl font-black text-xl transition-all border border-white/10 flex items-center justify-center gap-4 font-sans">
                                     <span>💬</span> CHAT ZALO
                                 </button>
-                            </div>
-
-                            <div className="mt-10 pt-8 border-t border-white/10 text-center">
-                                <p className="text-gray-400 text-[10px] font-medium tracking-tighter uppercase">
-                                    Tin đăng đã được HUTECH Room Finder xác thực
-                                </p>
                             </div>
                         </div>
 
                         {/* Card tiện ích nhỏ */}
                         <div className="bg-blue-50 rounded-[2.5rem] p-8 border border-blue-100">
-                            <h5 className="font-black text-blue-900 mb-4 uppercase text-xs tracking-widest text-center">Tiện ích đi kèm</h5>
-                            <div className="flex flex-wrap justify-center gap-2">
-                                {['Máy lạnh', 'Wifi', 'Giờ tự do', 'An ninh'].map(item => (
-                                    <span key={item} className="bg-white px-3 py-1.5 rounded-xl text-xs font-bold text-blue-700 shadow-sm">
-                                        ✓ {item}
-                                    </span>
-                                ))}
+                            <h5 className="font-black text-blue-900 mb-4 uppercase text-xs tracking-widest text-center font-sans">
+                                Tiện ích đi kèm
+                            </h5>
+                            <div className="flex flex-wrap justify-center gap-2 font-sans">
+                                {room?.roomamenities && room.roomamenities.length > 0 ? (
+                                    room.roomamenities.map((item, index) => (
+                                        <span
+                                            key={index}
+                                            className="bg-white px-3 py-1.5 rounded-xl text-xs font-bold text-blue-700 shadow-sm flex items-center gap-1"
+                                        >
+                                            <span className="text-blue-400">✓</span> {item.amenity?.amenity_name}
+                                        </span>
+                                    ))
+                                ) : (
+                                    <span className="text-gray-400 text-xs italic">Đang cập nhật tiện ích...</span>
+                                )}
                             </div>
                         </div>
                     </div>
                 </aside>
+            </div>
+            {/* PHẦN DƯỚI: COMMENT & ĐÁNH GIÁ   */}
+            <div className='bg-gray-100 p-8'>
+                <div>
+                    {/* input comment */}
+                    <CommentInput />
+
+                    {/* stars use component */}
+                    <Rating />
+                </div>
             </div>
         </div>
     );
