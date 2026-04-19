@@ -6,275 +6,311 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
 interface Post {
-  post_id: string;
-  post_title: string;
-  room_id: string;
-  user_id: string;
-  post_created_at: string;
-  post_updated_at?: string;
-  post_expired_at?: string;
-  rooms?: {
-    room_status: boolean;
-    location_id: string;
-  };
+    post_id: string;
+    post_title: string;
+    room_id: string | null;
+    user_id: string | null;
+    post_created_at: string | null;
+    post_update_at: string | null;   // ← tên đúng theo schema
+    rooms?: {
+        room_status: boolean | null;
+        room_price: number;
+        room_area: number | null;
+        locations: { city: string; district: string; ward: string } | null;
+    } | null;
 }
 
 export default function ManagePostsPage() {
-  const router = useRouter();
-  const [user, setUser] = useState<any>(null);
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+    const router = useRouter();
+    const [user, setUser] = useState<any>(null);
+    const [posts, setPosts] = useState<Post[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    const [success, setSuccess] = useState<string | null>(null);
+    const [togglingStatus, setTogglingStatus] = useState<string | null>(null);
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-      if (!user) {
-        router.push("/auth/login");
-      }
-    });
-  }, [router]);
+    useEffect(() => {
+        supabase.auth.getUser().then(({ data: { user } }) => {
+            setUser(user);
+            if (!user) router.push("/auth/login");
+        });
+    }, [router]);
 
-  useEffect(() => {
-    if (!user) return;
-    fetchUserPosts();
-  }, [user]);
+    useEffect(() => {
+        if (!user) return;
+        fetchUserPosts();
+    }, [user]);
 
-  useEffect(() => {
-    if (!success && !error) return;
-    const timer = setTimeout(() => {
-      setSuccess(null);
-      setError(null);
-    }, 4000);
-    return () => clearTimeout(timer);
-  }, [success, error]);
+    useEffect(() => {
+        if (!success && !error) return;
+        const timer = setTimeout(() => { setSuccess(null); setError(null); }, 4000);
+        return () => clearTimeout(timer);
+    }, [success, error]);
 
-  const fetchUserPosts = async () => {
-    setLoading(true);
-    try {
-      // Schema: posts(post_id, room_id, post_title, user_id, post_created_at, post_updated_at, post_expired_at)
-      // user_id là uuid từ auth
-      const { data, error } = await supabase
-        .from("posts")
-        .select(`
-          post_id,
-          post_title,
-          room_id,
-          user_id,
-          post_created_at,
-          post_updated_at,
-          post_expired_at,
-          rooms!inner(room_status, location_id)
-        `)
-        .eq("user_id", user.id)
-        .order("post_created_at", { ascending: false });
+    const fetchUserPosts = async () => {
+        setLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from("posts")
+                .select(`
+                    post_id,
+                    post_title,
+                    room_id,
+                    user_id,
+                    post_created_at,
+                    post_update_at,
+                    rooms:room_id (
+                        room_status,
+                        room_price,
+                        room_area,
+                        locations:location_id ( city, district, ward )
+                    )
+                `)
+                .eq("user_id", user.id)
+                .order("post_created_at", { ascending: false });
 
-      if (error) throw error;
-      setPosts(data || []);
-    } catch (err: any) {
-      setError(err.message || "Lỗi khi tải bài đăng");
-    } finally {
-      setLoading(false);
-    }
-  };
+            if (error) throw error;
+            setPosts(data as unknown as Post[] || []);
+        } catch (err: any) {
+            setError(err.message || "Lỗi khi tải bài đăng");
+        } finally {
+            setLoading(false);
+        }
+    };
 
-  const handleDelete = async (postId: string) => {
-    try {
-      // 1. Lấy post để kiểm tra quyền và lấy room_id
-      const { data: post, error: fetchErr } = await supabase
-        .from("posts")
-        .select("post_id, room_id, user_id")
-        .eq("post_id", postId)
-        .single();
+    const toggleRoomStatus = async (post: Post) => {
+        if (!post.room_id) return;
+        setTogglingStatus(post.post_id);
+        try {
+            const newStatus = !post.rooms?.room_status;
+            const { error } = await supabase
+                .from("rooms")
+                .update({ room_status: newStatus })
+                .eq("room_id", post.room_id)
+                .eq("owner_id", user.id);
 
-      if (fetchErr || !post) {
-        setError("Không tìm thấy bài đăng");
-        return;
-      }
+            if (error) throw error;
+            setSuccess(newStatus ? "Đã cập nhật: Còn phòng" : "Đã cập nhật: Hết phòng");
+            fetchUserPosts();
+        } catch (err: any) {
+            setError(err.message || "Lỗi khi cập nhật trạng thái");
+        } finally {
+            setTogglingStatus(null);
+        }
+    };
 
-      // 2. Kiểm tra quyền: user_id phải match
-      if (post.user_id !== user.id) {
-        setError("Bạn không có quyền xóa bài đăng này");
-        return;
-      }
+    const handleDelete = async (postId: string) => {
+        try {
+            const { data: post, error: fetchErr } = await supabase
+                .from("posts")
+                .select("post_id, room_id, user_id")
+                .eq("post_id", postId)
+                .single();
 
-      // 3. Xóa roomimages (ảnh phòng)
-      if (post.room_id) {
-        await supabase.from("roomimages").delete().eq("room_id", post.room_id);
+            if (fetchErr || !post) { setError("Không tìm thấy bài đăng"); return; }
+            if (post.user_id !== user.id) { setError("Bạn không có quyền xóa bài đăng này"); return; }
 
-        // 4. Xóa roomamenities (tiện ích)
-        await supabase.from("roomamenities").delete().eq("room_id", post.room_id);
+            if (post.room_id) {
+                await supabase.from("reviews").delete().eq("room_id", post.room_id);
+                await supabase.from("roomimages").delete().eq("room_id", post.room_id);
+                await supabase.from("roomamenities").delete().eq("room_id", post.room_id);
+            }
 
-        // 5. Xóa room
-        const { error: roomErr } = await supabase
-          .from("rooms")
-          .delete()
-          .eq("room_id", post.room_id)
-          .eq("owner_id", user.id);
+            await supabase.from("favorites").delete().eq("post_id", postId);
 
-        if (roomErr) throw new Error("Lỗi xóa phòng: " + roomErr.message);
-      }
+            const { error: postErr } = await supabase
+                .from("posts")
+                .delete()
+                .eq("post_id", postId)
+                .eq("user_id", user.id);
+            if (postErr) throw new Error("Lỗi xóa bài đăng: " + postErr.message);
 
-      // 6. Xóa post
-      const { error: postErr } = await supabase
-        .from("posts")
-        .delete()
-        .eq("post_id", postId)
-        .eq("user_id", user.id);
+            if (post.room_id) {
+                await supabase.from("rooms").delete().eq("room_id", post.room_id).eq("owner_id", user.id);
+            }
 
-      if (postErr) throw new Error("Lỗi xóa bài đăng: " + postErr.message);
+            setSuccess("Xóa bài đăng thành công!");
+            setDeleteConfirm(null);
+            fetchUserPosts();
+        } catch (err: any) {
+            setError(err.message || "Lỗi khi xóa bài đăng");
+        }
+    };
 
-      setSuccess("Xóa bài đăng thành công!");
-      setDeleteConfirm(null);
-      fetchUserPosts();
-    } catch (err: any) {
-      setError(err.message || "Lỗi khi xóa bài đăng");
-    }
-  };
+    if (!user) return null;
 
-  const handleEdit = (postId: string) => {
-    router.push(`/post/edit/${postId}`);
-  };
+    return (
+        <div className="min-h-screen bg-gray-50 pt-24 pb-12 px-4">
+            <div className="max-w-6xl mx-auto">
+                {/* Header */}
+                <div className="mb-8 flex items-start justify-between">
+                    <div>
+                        <h1 className="text-4xl font-black text-gray-900 mb-2">Quản lý bài đăng</h1>
+                        <p className="text-gray-500">
+                            {loading ? "Đang tải..." : `${posts.length} bài đăng của bạn`}
+                        </p>
+                    </div>
+                    <Link
+                        href="/post"
+                        className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-6 py-3.5 text-sm font-black text-white hover:bg-blue-700 transition-all active:scale-95 shadow-lg shadow-blue-200"
+                    >
+                        + Tạo bài đăng mới
+                    </Link>
+                </div>
 
-  if (!user) {
-    return null;
-  }
+                {/* Alerts */}
+                {error && (
+                    <div className="mb-6 bg-red-50 border border-red-100 rounded-2xl p-4 flex items-start gap-3">
+                        <span className="text-red-500 text-lg mt-0.5">⚠️</span>
+                        <p className="text-red-600 text-sm font-medium">{error}</p>
+                    </div>
+                )}
+                {success && (
+                    <div className="mb-6 bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex items-start gap-3">
+                        <span className="text-emerald-600 text-lg mt-0.5">✅</span>
+                        <p className="text-emerald-700 text-sm font-medium">{success}</p>
+                    </div>
+                )}
 
-  return (
-    <div className="min-h-screen bg-gray-50 pt-24 pb-12 px-4">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-black text-gray-900 mb-2">Quản lý bài đăng</h1>
-          <p className="text-gray-600">Tạo, sửa và xóa các bài đăng của bạn</p>
-        </div>
-
-        {/* Alerts */}
-        {error && (
-          <div className="mb-6 bg-red-50 border border-red-100 rounded-2xl p-4 flex items-start gap-3">
-            <span className="text-red-500 text-lg mt-0.5">⚠️</span>
-            <p className="text-red-600 text-sm font-medium">{error}</p>
-          </div>
-        )}
-        {success && (
-          <div className="mb-6 bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex items-start gap-3">
-            <span className="text-emerald-600 text-lg mt-0.5">✅</span>
-            <p className="text-emerald-700 text-sm font-medium">{success}</p>
-          </div>
-        )}
-
-        {/* New Post Button */}
-        <Link
-          href="/post"
-          className="inline-flex items-center justify-center mb-8 rounded-2xl bg-blue-600 px-8 py-4 text-sm font-black text-white hover:bg-blue-700 transition-all active:scale-95"
-        >
-          + Tạo bài đăng mới
-        </Link>
-
-        {/* Posts Table */}
-        {loading ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500">Đang tải bài đăng...</p>
-          </div>
-        ) : posts.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
-            <p className="text-gray-500 text-lg mb-4">Bạn chưa có bài đăng nào</p>
-            <Link
-              href="/post"
-              className="inline-flex items-center justify-center rounded-2xl bg-blue-600 px-6 py-3 text-sm font-black text-white hover:bg-blue-700 transition-all"
-            >
-              Tạo bài đăng đầu tiên
-            </Link>
-          </div>
-        ) : (
-          <div className="overflow-x-auto bg-white rounded-2xl border border-gray-200 shadow-sm">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200 bg-gray-50">
-                  <th className="px-6 py-4 text-left text-xs font-black text-gray-600 uppercase">Tiêu đề</th>
-                  <th className="px-6 py-4 text-left text-xs font-black text-gray-600 uppercase">Trạng thái</th>
-                  <th className="px-6 py-4 text-left text-xs font-black text-gray-600 uppercase">Ngày tạo</th>
-                  <th className="px-6 py-4 text-left text-xs font-black text-gray-600 uppercase">Cập nhật lần cuối</th>
-                  <th className="px-6 py-4 text-center text-xs font-black text-gray-600 uppercase">Hành động</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {posts.map((post) => (
-                  <tr key={post.post_id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 text-sm text-gray-900 font-medium">{post.post_title}</td>
-                    <td className="px-6 py-4 text-sm">
-                      <span
-                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${
-                          post.rooms?.room_status
-                            ? "bg-green-100 text-green-700"
-                            : "bg-gray-100 text-gray-700"
-                        }`}
-                      >
-                        {post.rooms?.room_status ? "Còn phòng" : "Hết phòng"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {new Date(post.post_created_at).toLocaleDateString("vi-VN")}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {post.post_updated_at
-                        ? new Date(post.post_updated_at).toLocaleDateString("vi-VN")
-                        : "—"}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => handleEdit(post.post_id)}
-                          className="inline-flex items-center justify-center rounded-lg bg-blue-100 px-4 py-2 text-xs font-bold text-blue-600 hover:bg-blue-200 transition-all"
+                {/* Content */}
+                {loading ? (
+                    <div className="bg-white rounded-2xl border border-gray-200 p-8 space-y-4">
+                        {[...Array(3)].map((_, i) => (
+                            <div key={i} className="animate-pulse flex gap-4">
+                                <div className="flex-1 h-10 bg-gray-200 rounded" />
+                                <div className="w-24 h-10 bg-gray-200 rounded" />
+                                <div className="w-32 h-10 bg-gray-200 rounded" />
+                            </div>
+                        ))}
+                    </div>
+                ) : posts.length === 0 ? (
+                    <div className="bg-white rounded-2xl border border-gray-200 p-16 text-center">
+                        <span className="text-6xl">📝</span>
+                        <p className="text-gray-500 text-xl mt-4 mb-2 font-medium">Bạn chưa có bài đăng nào</p>
+                        <p className="text-gray-400 text-sm mb-6">Tạo bài đăng đầu tiên để bắt đầu cho thuê phòng</p>
+                        <Link
+                            href="/post"
+                            className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-8 py-4 text-sm font-black text-white hover:bg-blue-700 transition-all"
                         >
-                          Sửa
-                        </button>
-                        <button
-                          onClick={() => setDeleteConfirm(post.post_id)}
-                          className="inline-flex items-center justify-center rounded-lg bg-red-100 px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-200 transition-all"
-                        >
-                          Xóa
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                            + Tạo bài đăng đầu tiên
+                        </Link>
+                    </div>
+                ) : (
+                    /* Card layout thay vì table để mobile-friendly */
+                    <div className="space-y-4">
+                        {posts.map((post) => {
+                            const isAvailable = post.rooms?.room_status !== false;
+                            const location = post.rooms?.locations;
+                            const locationText = location
+                                ? [location.district, location.city].filter(Boolean).join(', ')
+                                : '—';
+                            const price = post.rooms?.room_price;
+                            const priceText = price
+                                ? (price >= 1_000_000 ? (price / 1_000_000).toFixed(1).replace(/\.0$/, '') + ' triệu/tháng' : price.toLocaleString('vi-VN') + ' đ/tháng')
+                                : '—';
 
-      {/* Delete Confirmation Modal */}
-      {deleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-8 text-center">
-            <div className="mb-6">
-              <span className="text-5xl">🗑️</span>
+                            return (
+                                <div key={post.post_id} className="bg-white rounded-2xl border border-gray-200 p-6 hover:border-gray-300 transition-all">
+                                    <div className="flex flex-col md:flex-row md:items-center gap-4">
+                                        {/* Info */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 flex-wrap mb-2">
+                                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${
+                                                    isAvailable ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"
+                                                }`}>
+                                                    {isAvailable ? "● Còn phòng" : "○ Hết phòng"}
+                                                </span>
+                                                {post.rooms?.room_area && (
+                                                    <span className="text-xs text-gray-400 font-medium">📏 {post.rooms.room_area}m²</span>
+                                                )}
+                                            </div>
+                                            <h3 className="font-bold text-gray-900 text-base line-clamp-1 mb-1">{post.post_title}</h3>
+                                            <div className="flex items-center gap-4 text-sm text-gray-500">
+                                                <span>📍 {locationText}</span>
+                                                <span className="text-blue-600 font-bold">💰 {priceText}</span>
+                                            </div>
+                                            <div className="mt-1 text-xs text-gray-400">
+                                                Đăng ngày {post.post_created_at ? new Date(post.post_created_at).toLocaleDateString('vi-VN') : '—'}
+                                                {post.post_update_at && ` · Cập nhật ${new Date(post.post_update_at).toLocaleDateString('vi-VN')}`}
+                                            </div>
+                                        </div>
+
+                                        {/* Actions */}
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            {/* View */}
+                                            <Link
+                                                href={`/rooms/${post.post_id}`}
+                                                className="inline-flex items-center justify-center rounded-lg bg-gray-100 px-3 py-2 text-xs font-bold text-gray-600 hover:bg-gray-200 transition-all"
+                                                title="Xem bài đăng"
+                                            >
+                                                👁️
+                                            </Link>
+
+                                            {/* Toggle status */}
+                                            <button
+                                                onClick={() => toggleRoomStatus(post)}
+                                                disabled={togglingStatus === post.post_id}
+                                                className={`inline-flex items-center justify-center rounded-lg px-3 py-2 text-xs font-bold transition-all ${
+                                                    isAvailable
+                                                        ? "bg-orange-100 text-orange-600 hover:bg-orange-200"
+                                                        : "bg-green-100 text-green-600 hover:bg-green-200"
+                                                }`}
+                                                title={isAvailable ? "Đánh dấu hết phòng" : "Đánh dấu còn phòng"}
+                                            >
+                                                {togglingStatus === post.post_id ? "..." : (isAvailable ? "Hết phòng" : "Còn phòng")}
+                                            </button>
+
+                                            {/* Edit */}
+                                            <Link
+                                                href={`/post/edit/${post.post_id}`}
+                                                className="inline-flex items-center justify-center rounded-lg bg-blue-100 px-4 py-2 text-xs font-bold text-blue-600 hover:bg-blue-200 transition-all"
+                                            >
+                                                ✏️ Sửa
+                                            </Link>
+
+                                            {/* Delete */}
+                                            <button
+                                                onClick={() => setDeleteConfirm(post.post_id)}
+                                                className="inline-flex items-center justify-center rounded-lg bg-red-100 px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-200 transition-all"
+                                            >
+                                                🗑️ Xóa
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
-            <h3 className="text-xl font-black text-gray-900 mb-2">Xóa bài đăng?</h3>
-            <p className="text-gray-600 text-sm mb-8">
-              Bạn chắc chắn muốn xóa bài đăng này? Hành động này sẽ xóa toàn bộ dữ liệu liên quan (phòng, ảnh, tiện ích).
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setDeleteConfirm(null)}
-                className="flex-1 rounded-xl border-2 border-gray-300 px-4 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50 transition-all"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={() => handleDelete(deleteConfirm)}
-                className="flex-1 rounded-xl bg-red-600 px-4 py-3 text-sm font-bold text-white hover:bg-red-700 transition-all"
-              >
-                Xóa
-              </button>
-            </div>
-          </div>
+
+            {/* Delete Confirmation Modal */}
+            {deleteConfirm && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-8 text-center">
+                        <span className="text-5xl">🗑️</span>
+                        <h3 className="text-xl font-black text-gray-900 mt-4 mb-2">Xóa bài đăng?</h3>
+                        <p className="text-gray-500 text-sm mb-8">
+                            Hành động này sẽ xóa toàn bộ dữ liệu liên quan bao gồm phòng, ảnh, tiện ích và đánh giá. Không thể hoàn tác.
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setDeleteConfirm(null)}
+                                className="flex-1 rounded-xl border-2 border-gray-200 px-4 py-3 text-sm font-bold text-gray-600 hover:bg-gray-50 transition-all"
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                onClick={() => handleDelete(deleteConfirm)}
+                                className="flex-1 rounded-xl bg-red-600 px-4 py-3 text-sm font-bold text-white hover:bg-red-700 transition-all"
+                            >
+                                Xóa
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
-      )}
-    </div>
-  );
+    );
 }

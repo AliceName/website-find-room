@@ -1,79 +1,101 @@
 import Image from 'next/image'
 import { Database } from '@/types/supabase'
 
-// Định nghĩa kiểu dữ liệu mở rộng cho Props của Card
-// Giúp TypeScript hiểu được các bảng lồng nhau sau khi Join
 interface PostCardProps {
     post: Database['public']['Tables']['posts']['Row'] & {
         rooms: (Database['public']['Tables']['rooms']['Row'] & {
-            room_types?: Database['public']['Tables']['roomtypes']['Row'];
+            room_types?: Database['public']['Tables']['roomtypes']['Row'] | null;
             roomimages?: Database['public']['Tables']['roomimages']['Row'][];
+            locations?: Database['public']['Tables']['locations']['Row'] | null;
         }) | null;
     }
 }
 
 export default function PostCard({ post }: PostCardProps) {
-    // 1. Lấy ảnh đại diện (Ưu tiên ảnh đầu tiên trong mảng roomimages)
     const thumbnail = post.rooms?.roomimages?.[0]?.image_url || '/placeholder-room.jpg'
 
-    // 2. Định dạng giá tiền VNĐ
     const formattedPrice = post.rooms?.room_price
-        ? post.rooms.room_price.toLocaleString('vi-VN')
+        ? post.rooms.room_price >= 1_000_000
+            ? (post.rooms.room_price / 1_000_000).toFixed(1).replace(/\.0$/, '') + ' triệu'
+            : post.rooms.room_price.toLocaleString('vi-VN') + ' đ'
         : '0';
 
-    return (
-        <div className="group bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col h-full">
-            {/* KHU VỰC HÌNH ẢNH */}
-            <div className="relative aspect-[4/3] w-full overflow-hidden">
-                <Image
-                    src={thumbnail}
-                    alt={post.post_title}
-                    fill
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                    className="object-cover group-hover:scale-110 transition-transform duration-500"
-                />
+    // room_status is boolean: true = còn phòng, false = hết phòng
+    const isAvailable = post.rooms?.room_status !== false;
 
-                {/* Label Loại phòng & Trạng thái */}
-                <div className="absolute top-3 left-3 flex flex-col gap-2">
+    const location = post.rooms?.locations;
+    const locationText = location
+        ? [location.district, location.city].filter(Boolean).join(', ')
+        : 'TP. Hồ Chí Minh';
+
+    const hasVR = !!(post.rooms?.vr_url || post.rooms?.roomimages?.some(img => img.is_360));
+
+    return (
+        <div className="group bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col h-full cursor-pointer">
+            {/* KHU VỰC HÌNH ẢNH */}
+            <div className="relative aspect-[4/3] w-full overflow-hidden bg-gray-100">
+                {thumbnail !== '/placeholder-room.jpg' ? (
+                    <Image
+                        src={thumbnail}
+                        alt={post.post_title}
+                        fill
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                        className="object-cover group-hover:scale-110 transition-transform duration-500"
+                    />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100">
+                        <span className="text-5xl">🏠</span>
+                    </div>
+                )}
+
+                {/* Labels */}
+                <div className="absolute top-3 left-3 flex flex-col gap-1.5">
                     {post.rooms?.room_types && (
                         <span className="bg-blue-600/90 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-lg uppercase tracking-wider">
                             {post.rooms.room_types.room_type_name}
                         </span>
                     )}
-                    <span className={`text-[10px] font-bold px-2 py-1 rounded-lg uppercase backdrop-blur-sm ${post.rooms?.room_status === 'available'
-                        ? 'bg-green-500/90 text-white'
-                        : 'bg-red-500/90 text-white'
-                        }`}>
-                        {post.rooms?.room_status === 'available' ? 'Còn phòng' : 'Hết phòng'}
+                    <span className={`text-[10px] font-bold px-2 py-1 rounded-lg uppercase backdrop-blur-sm ${
+                        isAvailable
+                            ? 'bg-green-500/90 text-white'
+                            : 'bg-red-500/90 text-white'
+                    }`}>
+                        {isAvailable ? 'Còn phòng' : 'Hết phòng'}
                     </span>
                 </div>
+
+                {/* VR badge */}
+                {hasVR && (
+                    <div className="absolute top-3 right-3">
+                        <span className="bg-purple-600/90 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-lg flex items-center gap-1">
+                            <span>🥽</span> VR
+                        </span>
+                    </div>
+                )}
             </div>
 
             {/* KHU VỰC NỘI DUNG */}
             <div className="p-5 flex flex-col flex-grow space-y-3">
-                {/* Tiêu đề bài đăng */}
-                <h3 className="font-bold text-gray-800 text-lg line-clamp-2 leading-tight min-h-[3rem]">
+                <h3 className="font-bold text-gray-800 text-base line-clamp-2 leading-tight min-h-[2.8rem]">
                     {post.post_title}
                 </h3>
 
-                {/* Thông tin diện tích */}
                 <div className="flex items-center gap-4 text-gray-500 text-sm">
                     <div className="flex items-center gap-1">
                         <span>📏</span>
                         <span className="font-medium">{post.rooms?.room_area || 0} m²</span>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 min-w-0">
                         <span>📍</span>
-                        <span className="truncate">Quận 9, TP.HCM</span>
+                        <span className="truncate text-xs">{locationText}</span>
                     </div>
                 </div>
 
-                {/* Giá và Nút chi tiết */}
-                <div className="pt-4 border-t border-gray-50 flex items-center justify-between mt-auto">
+                <div className="pt-3 border-t border-gray-50 flex items-center justify-between mt-auto">
                     <div>
-                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">Giá thuê</p>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">Giá thuê/tháng</p>
                         <p className="text-blue-600 font-black text-xl">
-                            {formattedPrice} <span className="text-sm font-bold">đ</span>
+                            {formattedPrice}
                         </p>
                     </div>
 
