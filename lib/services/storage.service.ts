@@ -5,35 +5,8 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const BUCKET_NAME = "roomImgNot360";
 
 /**
- * Check if bucket exists
- * NOTE: Does NOT create bucket - bucket must exist in Supabase Storage
+ * Upload image to storage and get public URL
  */
-const checkBucket = async (): Promise<boolean> => {
-  try {
-    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
-
-    if (listError) {
-      console.error(`[Storage] ❌ Failed to list buckets:`, listError);
-      return false;
-    }
-
-    const bucketExists = buckets?.some((b) => b.name === BUCKET_NAME);
-
-    if (bucketExists) {
-      console.log(`[Storage] ✅ Bucket '${BUCKET_NAME}' exists`);
-      return true;
-    }
-
-    console.error(`[Storage] ❌ Bucket '${BUCKET_NAME}' does not exist`);
-    console.error(`[Storage] ℹ️  Please create bucket '${BUCKET_NAME}' in Supabase Storage first`);
-    return false;
-  } catch (err: any) {
-    console.error(`[Storage] ❌ Error checking bucket:`, err);
-    return false;
-  }
-};
-
-// 1. Hàm upload ảnh lên Storage và lấy URL
 export const uploadRoomImage = async (
   file: File,
   roomId: string,
@@ -53,15 +26,7 @@ export const uploadRoomImage = async (
   const random = Math.random().toString(36).substring(2, 9);
   const fileName = `${roomId}/${timestamp}-${random}.${fileExt}`;
 
-  // Check bucket exists
-  const bucketReady = await checkBucket();
-  if (!bucketReady) {
-    return {
-      error: `Bucket '${BUCKET_NAME}' không tồn tại. Vui lòng tạo bucket này trong Supabase Storage.`,
-    };
-  }
-
-  // Upload file lên bucket 'room-images'
+  // Upload file to bucket
   const { data, error } = await supabase.storage
     .from(BUCKET_NAME)
     .upload(fileName, file);
@@ -76,19 +41,19 @@ export const uploadRoomImage = async (
       error.message.includes("does not exist")
     ) {
       return {
-        error: `Bucket chưa được khởi tạo. Vui lòng vào /setup để khởi tạo storage.`,
+        error: `Bucket '${BUCKET_NAME}' không tồn tại. Vui lòng tạo bucket trong Supabase Storage trước.`,
       };
     }
 
     return { error: `Lỗi upload: ${error.message}` };
   }
 
-  // Lấy URL công khai
+  // Get public URL
   const {
     data: { publicUrl },
   } = supabase.storage.from(BUCKET_NAME).getPublicUrl(fileName);
 
-  // Lưu URL vào bảng roomimages
+  // Save URL to database
   const { data: imageData, error: dbError } = await supabase
     .from("roomimages")
     .insert([{ room_id: roomId, image_url: publicUrl, is_360: is360 }])
@@ -174,25 +139,13 @@ export const updateImage360Status = async (
   return { data, error: null };
 };
 
-// 5. Hàm upload nhiều ảnh cùng lúc
+// 5. Upload multiple images at once
 export const uploadMultipleRoomImages = async (
   files: File[],
   roomId: string
 ) => {
   if (files.length === 0) {
     return { success: true, uploads: [], errors: [] };
-  }
-
-  // Check bucket exists once for all uploads
-  const bucketReady = await checkBucket();
-  if (!bucketReady) {
-    const error = `Bucket '${BUCKET_NAME}' không tồn tại. Vui lòng tạo bucket này trong Supabase Storage.`;
-    console.error(`[Storage]`, error);
-    return {
-      success: false,
-      uploads: [],
-      errors: files.map(() => error),
-    };
   }
 
   const uploads = [];
