@@ -115,7 +115,7 @@ export function VirtualTourViewer({ url, className = "" }: VirtualTourViewerProp
         allowFullScreen
         loading="lazy"
         referrerPolicy="no-referrer"
-        sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-top-navigation allow-presentation"
+        sandbox="allow-scripts allow-popups allow-forms allow-presentation"
         onError={handleIframeError}
       />
     </div>

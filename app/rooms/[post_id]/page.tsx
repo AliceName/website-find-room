@@ -1,6 +1,7 @@
 import RoomGallery from '@/components/rooms/RoomGallery'
 import ReviewSection from '@/components/rooms/ReviewSection'
 import FavoriteButton from '@/components/rooms/FavoriteButton'
+import { Badge, ContactButton, VirtualTourViewer } from '@/components/common'
 import { supabase } from '@/lib/supabaseClient'
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
@@ -78,21 +79,21 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ pos
                     <div className="space-y-3 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                             {room?.room_types && (
-                                <span className="bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1 rounded-full">
+                                <Badge variant="info" size="md">
                                     {room.room_types.room_type_name}
-                                </span>
+                                </Badge>
                             )}
-                            <span className={`text-xs font-bold px-3 py-1 rounded-full ${
-                                room?.room_status !== false
-                                    ? 'bg-green-100 text-green-700'
-                                    : 'bg-red-100 text-red-700'
-                            }`}>
-                                {room?.room_status !== false ? '✓ Còn phòng' : '✗ Hết phòng'}
-                            </span>
+                            <Badge
+                                variant={room?.room_status !== false ? "success" : "danger"}
+                                size="md"
+                                icon={room?.room_status !== false ? "✓" : "✗"}
+                            >
+                                {room?.room_status !== false ? "Còn phòng" : "Hết phòng"}
+                            </Badge>
                             {avgRating && (
-                                <span className="bg-yellow-50 text-yellow-700 text-xs font-bold px-3 py-1 rounded-full">
-                                    ⭐ {avgRating} ({reviewsData?.length} đánh giá)
-                                </span>
+                                <Badge variant="warning" size="md" icon="⭐">
+                                    {avgRating} ({reviewsData?.length} đánh giá)
+                                </Badge>
                             )}
                         </div>
 
@@ -131,15 +132,7 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ pos
                 {/* LEFT COLUMN */}
                 <div className="lg:col-span-8 space-y-10">
                     {/* VR Tour */}
-                    {finalVrUrl && (
-                        <div className="relative rounded-[3rem] overflow-hidden bg-gray-900 border-8 border-white shadow-2xl h-[400px] md:h-[550px]">
-                            <div className="absolute top-6 left-6 z-20 bg-black/60 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/20 flex items-center gap-3">
-                                <span className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_10px_red]" />
-                                <span className="text-[10px] text-white font-black uppercase tracking-widest">Virtual Tour 360°</span>
-                            </div>
-                            <iframe src={finalVrUrl} className="w-full h-full border-none" allowFullScreen />
-                        </div>
-                    )}
+                    {finalVrUrl && <VirtualTourViewer url={finalVrUrl} />}
 
                     {/* Gallery */}
                     {normalImages.length > 0 && <RoomGallery images={normalImages} />}
@@ -192,46 +185,31 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ pos
                 <aside className="lg:col-span-4">
                     <div className="sticky top-10 space-y-6">
                         {/* Contact Card */}
-                        <div className="bg-gray-900 rounded-[3rem] p-8 text-white shadow-2xl border-t-8 border-blue-600">
+                        <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-[3rem] p-8 text-white shadow-2xl border-t-8 border-blue-400">
                             <div className="flex items-center gap-4 mb-8">
-                                <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center text-2xl shadow-lg">
+                                <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center text-2xl shadow-lg">
                                     👤
                                 </div>
                                 <div>
-                                    <p className="text-blue-400 text-[10px] font-black uppercase tracking-widest">Chủ tin đăng</p>
+                                    <p className="text-blue-100 text-xs font-bold uppercase tracking-widest">Chủ tin đăng</p>
                                     <h4 className="font-bold text-lg">{post.users?.user_name || 'Chủ trọ'}</h4>
                                 </div>
                             </div>
 
-                            <div className="space-y-3">
-                                {post.users?.user_phone ? (
-                                    <a
-                                        href={`tel:${post.users.user_phone}`}
-                                        className="w-full bg-blue-600 hover:bg-blue-500 py-5 rounded-2xl font-black text-lg transition-all shadow-lg active:scale-95 flex items-center justify-center gap-3 cursor-pointer"
-                                    >
-                                        <span>📞</span> {post.users.user_phone}
-                                    </a>
-                                ) : (
-                                    <div className="w-full bg-blue-600/50 py-5 rounded-2xl font-black text-lg flex items-center justify-center gap-3">
-                                        <span>📞</span> Liên hệ chủ trọ
-                                    </div>
-                                )}
-
-                                {post.users?.user_phone && (
-                                    <a
-                                        href={`https://zalo.me/${post.users.user_phone.replace(/\s/g, '')}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="w-full bg-white/10 hover:bg-white/20 py-5 rounded-2xl font-black text-lg transition-all border border-white/10 flex items-center justify-center gap-3"
-                                    >
-                                        <span>💬</span> CHAT ZALO
-                                    </a>
-                                )}
+                            <div className="space-y-4">
+                                <ContactButton
+                                    ownerPhone={post.users?.user_phone}
+                                    ownerEmail={post.users?.user_email}
+                                    ownerName={post.users?.user_name}
+                                    roomTitle={post.post_title}
+                                />
                             </div>
 
-                            <div className="mt-8 pt-6 border-t border-white/10 text-center">
-                                <p className="text-gray-400 text-[10px] font-medium uppercase tracking-tighter">
-                                    Đăng ngày {post.post_created_at ? new Date(post.post_created_at).toLocaleDateString('vi-VN') : '—'}
+                            <div className="mt-8 pt-6 border-t border-white/20 text-center">
+                                <p className="text-blue-100 text-xs font-medium uppercase tracking-tighter">
+                                    Đăng ngày {post.post_created_at
+                                        ? new Date(post.post_created_at).toLocaleDateString("vi-VN")
+                                        : "—"}
                                 </p>
                             </div>
                         </div>
