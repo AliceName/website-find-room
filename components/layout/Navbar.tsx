@@ -1,188 +1,188 @@
-"use client"
+"use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
 export default function Navbar() {
-  const router = useRouter();
-  const [showFilter, setShowFilter] = useState(false); // Điều khiển hiện/ẩn bộ lọc
-  const [showMap, setShowMap] = useState(false); // State để mở bản đồ
-  const [user, setUser] = useState<any>(null);
+    const router = useRouter();
+    const pathname = usePathname();
+    const [user, setUser] = useState<any>(null);
+    const [userRole, setUserRole] = useState<string | null>(null);
+    const [mobileOpen, setMobileOpen] = useState(false);
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-    });
+    useEffect(() => {
+        supabase.auth.getUser().then(({ data: { user } }) => {
+            setUser(user);
+            if (user) fetchUserRole(user.id);
+        });
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
+        const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+            setUser(session?.user ?? null);
+            if (session?.user) fetchUserRole(session.user.id);
+            else setUserRole(null);
+        });
 
-    return () => authListener?.subscription?.unsubscribe();
-  }, []);
+        return () => authListener?.subscription?.unsubscribe();
+    }, []);
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    router.push("/");
-  };
+    const fetchUserRole = async (userId: string) => {
+        const { data } = await supabase
+            .from("users")
+            .select("user_role")
+            .eq("user_id", userId)
+            .single();
+        if (data) setUserRole(data.user_role);
+    };
 
-  return (
-    <nav className="bg-white shadow-md sticky top-0 z-[50]">
-      <div className="max-w-7xl mx-auto px-4 md:px-6 py-3">
-        <div className="flex justify-between items-center gap-4">
-          {/* LOGO */}
-          <Link href="/" className="text-2xl font-black text-blue-600 shrink-0">
-            FindRoom
-          </Link>
+    const handleSignOut = async () => {
+        await supabase.auth.signOut();
+        setUser(null);
+        setUserRole(null);
+        setMobileOpen(false);
+        router.push("/");
+        router.refresh();
+    };
 
-          {/* SEARCH BAR */}
-          <div className="flex-grow max-w-xl relative">
-            <input
-              type="text"
-              placeholder="Tìm khu vực, tên đường..."
-              className="w-full bg-gray-100 border-none rounded-2xl py-2.5 pl-11 pr-20 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-            />
-            {/* Nút Tìm kiếm (Click vào đây để hiện bộ lọc) */}
-            <button
-              onClick={() => setShowFilter(!showFilter)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-blue-700 transition-all"
-            >
-              Bộ lọc
-            </button>
-          </div>
+    // Hide on auth pages
+    const isAuthPage = pathname?.startsWith("/auth");
+    if (isAuthPage) return null;
 
-          {/* MENU DESKTOP */}
-          <ul className="hidden lg:flex space-x-6 text-gray-600 font-bold text-sm uppercase">
-            <li><Link href="/">Trang chủ</Link></li>
-            {!user && <li><Link href="/post">Đăng tin</Link></li>}
-            {user ? (
-              <li className="flex items-center gap-3">
-                <Link href="/post" className="text-gray-600 hover:text-blue-700">Đăng tin</Link>
-                <span className="text-gray-300">|</span>
-                <Link href="/manage-posts" className="text-blue-600 hover:text-blue-700">Quản lý bài đăng</Link>
-                <span className="text-gray-300">|</span>
-                <Link href="/profile" className="text-blue-600 hover:text-blue-700">Hồ sơ</Link>
-                <span className="text-gray-300">|</span>
-                <button
-                  type="button"
-                  onClick={handleSignOut}
-                  className="text-blue-600 hover:text-blue-700"
-                >
-                  ĐĂNG XUẤT
-                </button>
-              </li>
-            ) : (
-              <li className="flex items-center gap-2">
-                <Link href="/auth/login" className="text-blue-600 hover:text-blue-700">Đăng nhập</Link>
-                <span className="text-gray-300">|</span>
-                <Link href="/auth/register" className="text-blue-600 hover:text-blue-700">Đăng ký</Link>
-              </li>
+    return (
+        <nav className="bg-white/95 backdrop-blur-sm shadow-sm sticky top-0 z-[50] border-b border-gray-100">
+            <div className="max-w-7xl mx-auto px-4 md:px-6">
+                <div className="flex items-center justify-between h-16 gap-4">
+                    {/* LOGO */}
+                    <Link href="/" className="text-2xl font-black text-blue-600 shrink-0">
+                        FindRoom
+                    </Link>
+
+                    {/* SEARCH - desktop */}
+                    <div className="flex-grow max-w-md hidden md:block">
+                        <Link href="/rooms" className="block">
+                            <div className="flex items-center bg-gray-100 hover:bg-gray-200 rounded-2xl py-2.5 pl-11 pr-4 text-sm text-gray-400 transition-colors relative cursor-text">
+                                <span className="absolute left-4 text-gray-400">🔍</span>
+                                Tìm phòng, khu vực...
+                            </div>
+                        </Link>
+                    </div>
+
+                    {/* DESKTOP NAV */}
+                    <div className="hidden lg:flex items-center gap-1">
+                        <NavLink href="/rooms">Tìm phòng</NavLink>
+
+                        {user ? (
+                            <>
+                                {userRole === 'owner' && (
+                                    <NavLink href="/post">Đăng tin</NavLink>
+                                )}
+                                <NavLink href="/favorites">❤️ Đã lưu</NavLink>
+                                <NavLink href="/manage-posts">Quản lý</NavLink>
+                                <NavLink href="/profile">Hồ sơ</NavLink>
+                                <button
+                                    onClick={handleSignOut}
+                                    className="ml-2 px-4 py-2 rounded-xl text-sm font-bold text-red-500 hover:bg-red-50 transition-all"
+                                >
+                                    Đăng xuất
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <Link
+                                    href="/auth/login"
+                                    className="px-4 py-2 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-100 transition-all"
+                                >
+                                    Đăng nhập
+                                </Link>
+                                <Link
+                                    href="/auth/register"
+                                    className="ml-1 px-5 py-2 rounded-xl text-sm font-black bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-md shadow-blue-200"
+                                >
+                                    Đăng ký
+                                </Link>
+                            </>
+                        )}
+                    </div>
+
+                    {/* MOBILE MENU TOGGLE */}
+                    <button
+                        onClick={() => setMobileOpen(!mobileOpen)}
+                        className="lg:hidden p-2 rounded-xl hover:bg-gray-100 transition-all"
+                    >
+                        <div className="w-5 space-y-1">
+                            <span className={`block h-0.5 bg-gray-600 transition-all ${mobileOpen ? 'rotate-45 translate-y-1.5' : ''}`} />
+                            <span className={`block h-0.5 bg-gray-600 transition-all ${mobileOpen ? 'opacity-0' : ''}`} />
+                            <span className={`block h-0.5 bg-gray-600 transition-all ${mobileOpen ? '-rotate-45 -translate-y-1.5' : ''}`} />
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            {/* MOBILE MENU */}
+            {mobileOpen && (
+                <div className="lg:hidden border-t border-gray-100 bg-white px-4 py-4 space-y-1">
+                    {/* Search on mobile */}
+                    <Link href="/rooms" onClick={() => setMobileOpen(false)}>
+                        <div className="flex items-center bg-gray-50 rounded-2xl py-3 pl-10 pr-4 text-sm text-gray-400 relative mb-3">
+                            <span className="absolute left-4">🔍</span>
+                            Tìm phòng, khu vực...
+                        </div>
+                    </Link>
+
+                    <MobileNavLink href="/rooms" onClick={() => setMobileOpen(false)}>🏠 Tìm phòng</MobileNavLink>
+
+                    {user ? (
+                        <>
+                            <MobileNavLink href="/post" onClick={() => setMobileOpen(false)}>📝 Đăng tin</MobileNavLink>
+                            <MobileNavLink href="/favorites" onClick={() => setMobileOpen(false)}>❤️ Tin đã lưu</MobileNavLink>
+                            <MobileNavLink href="/manage-posts" onClick={() => setMobileOpen(false)}>📋 Quản lý bài đăng</MobileNavLink>
+                            <MobileNavLink href="/profile" onClick={() => setMobileOpen(false)}>👤 Hồ sơ của tôi</MobileNavLink>
+                            <button
+                                onClick={handleSignOut}
+                                className="w-full text-left px-4 py-3 rounded-xl text-sm font-bold text-red-500 hover:bg-red-50 transition-all"
+                            >
+                                🚪 Đăng xuất
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <MobileNavLink href="/auth/login" onClick={() => setMobileOpen(false)}>Đăng nhập</MobileNavLink>
+                            <div className="pt-2">
+                                <Link
+                                    href="/auth/register"
+                                    onClick={() => setMobileOpen(false)}
+                                    className="block w-full text-center px-4 py-3 rounded-xl text-sm font-black bg-blue-600 text-white hover:bg-blue-700 transition-all"
+                                >
+                                    Đăng ký ngay
+                                </Link>
+                            </div>
+                        </>
+                    )}
+                </div>
             )}
-          </ul>
-        </div>
+        </nav>
+    );
+}
 
-        {/* --------------------------------------------------------- */}
-        {/* BỘ LỌC HIỆN RA SAU KHI ẤN (ACCORDION) */}
-        {/* --------------------------------------------------------- */}
-        <div className={`overflow-hidden transition-all duration-500 ease-in-out ${showFilter ? 'max-h-[400px] mt-4 opacity-100' : 'max-h-0 opacity-0'}`}>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-6 bg-blue-50 rounded-[2rem] border border-blue-100">
+function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
+    return (
+        <Link
+            href={href}
+            className="px-4 py-2 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all"
+        >
+            {children}
+        </Link>
+    );
+}
 
-            {/* Khoảng giá */}
-            <div className="space-y-2">
-              <label className="text-xs font-black text-blue-900 uppercase">Khoảng giá</label>
-              <select className="w-full p-2.5 rounded-xl border-none text-sm bg-white shadow-sm outline-none">
-                <option>Tất cả giá</option>
-                <option>Dưới 2 triệu</option>
-                <option>2 - 5 triệu</option>
-                <option>Trên 5 triệu</option>
-              </select>
-            </div>
-
-            {/* Loại phòng */}
-            <div className="space-y-2">
-              <label className="text-xs font-black text-blue-900 uppercase">Loại phòng</label>
-              <select className="w-full p-2.5 rounded-xl border-none text-sm bg-white shadow-sm outline-none">
-                <option>Tất cả loại</option>
-                <option>Phòng trọ</option>
-                <option>Căn hộ mini</option>
-                <option>Ký túc xá</option>
-              </select>
-            </div>
-
-            {/* Diện tích */}
-            <div className="space-y-2">
-              <label className="text-xs font-black text-blue-900 uppercase">Diện tích</label>
-              <select className="w-full p-2.5 rounded-xl border-none text-sm bg-white shadow-sm outline-none">
-                <option>Tất cả diện tích</option>
-                <option>Dưới 20m²</option>
-                <option>20 - 40m²</option>
-                <option>Trên 40m²</option>
-              </select>
-            </div>
-
-            {/* Nút Áp dụng */}
-            <div className="flex items-end">
-              <button className="w-full bg-blue-600 text-white py-2.5 rounded-xl font-black text-sm hover:shadow-lg hover:shadow-blue-200 transition-all">
-                ÁP DỤNG
-              </button>
-            </div>
-
-            {/* NÚT CHỌN TRÊN BẢN ĐỒ - THIẾT KẾ NỔI BẬT */}
-            <div className="col-span-2 md:col-span-4 border-t border-blue-100 pt-4">
-              <button
-                onClick={() => setShowMap(true)}
-                className="w-full bg-white hover:bg-gray-50 text-blue-600 border-2 border-dashed border-blue-300 py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-3 transition-all active:scale-95"
-              >
-                <span className="text-xl">📍</span>
-                CHỌN VỊ TRÍ TRÊN BẢN ĐỒ TRỰC QUAN
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-      {/* --------------------------------------------------------- */}
-      {/* MODAL BẢN ĐỒ (LIGHTBOX) */}
-      {/* --------------------------------------------------------- */}
-      {showMap && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 md:p-10 animate-in fade-in">
-          <div className="bg-white w-full max-w-5xl h-[80vh] rounded-[3rem] overflow-hidden relative shadow-2xl border-8 border-white">
-
-            {/* Header của Map Modal */}
-            <div className="absolute top-6 left-6 z-10 bg-white/90 backdrop-blur px-6 py-3 rounded-2xl shadow-xl flex items-center gap-4">
-              <span className="text-blue-600 font-black">FindRoom Map</span>
-              <p className="text-xs text-gray-500 font-bold">Di chuyển ghim để tìm phòng quanh HUTECH</p>
-            </div>
-
-            {/* Nút Đóng */}
-            <button
-              onClick={() => setShowMap(false)}
-              className="absolute top-6 right-6 z-10 bg-white w-12 h-12 rounded-full shadow-xl font-bold hover:rotate-90 transition-transform"
-            >
-              ✕
-            </button>
-
-            {/* KHU VỰC NHÚNG MAP (Iframe hoặc Leaflet Component) */}
-            <div className="w-full h-full bg-gray-200">
-              {/* Tạm thời dùng Google Maps Iframe để Nga test giao diện */}
-              <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3919.5201952559787!2d106.7019!3d10.7711!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31752f40a76d4531%3A0x759a36a0c8a23912!2zSFVURUNIIC0gxJDhuqFpIGjhu41jIEPDtG5nIG5naOG7hyBUUC5IQ00!5e0!3m2!1svi!2s!4v1713400000000!5m2!1svi!2s"
-                className="w-full h-full border-none"
-                allowFullScreen
-                loading="lazy"
-              ></iframe>
-            </div>
-
-            {/* Footer nút xác nhận */}
-            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-10">
-              <button className="bg-blue-600 text-white px-10 py-4 rounded-2xl font-black shadow-2xl hover:scale-105 transition-transform active:scale-95">
-                XÁC NHẬN VỊ TRÍ NÀY
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </nav>
-  );
+function MobileNavLink({ href, children, onClick }: { href: string; children: React.ReactNode; onClick: () => void }) {
+    return (
+        <Link
+            href={href}
+            onClick={onClick}
+            className="block px-4 py-3 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition-all"
+        >
+            {children}
+        </Link>
+    );
 }
