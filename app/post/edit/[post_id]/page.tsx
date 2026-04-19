@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import ImageUploader from "@/components/common/ImageUploader";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -29,9 +30,9 @@ interface FormData {
     room_status: boolean;
 }
 
-export default function EditPostPage({ params }: { params: { post_id: string } }) {
+export default function EditPostPage({ params }: { params: Promise<{ post_id: string }> }) {
     const router = useRouter();
-    const postId = params.post_id;
+    const { post_id: postId } = use(params);
 
     const [user, setUser] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -309,11 +310,26 @@ export default function EditPostPage({ params }: { params: { post_id: string } }
                             placeholder="Mô tả đặc điểm, tiện ích của phòng..." rows={4} className={inputCls} />
                     </div>
 
+                    {/* Hình ảnh */}
+                    {roomId && (
+                        <div>
+                            <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-3">📸 Quản lý hình ảnh</label>
+                            <ImageUploader 
+                                roomId={roomId}
+                                maxFiles={8}
+                            />
+                        </div>
+                    )}
+
                     {/* VR URL */}
                     <div>
                         <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Link tour ảo 360° (tùy chọn)</label>
                         <input type="url" value={form.vr_url} onChange={e => update("vr_url", e.target.value)}
                             placeholder="VD: https://..." className={inputCls} />
+                        <p className="text-xs text-gray-500 mt-2 space-y-1">
+                            <span className="block">✓ Hỗ trợ: Google Maps Embed, Matterport, YouTube 360°</span>
+                            <span className="block text-gray-400">Lưu ý: Dùng URL nhúng (embed), không dùng link chia sẻ thông thường</span>
+                        </p>
                     </div>
 
                     {/* Buttons */}

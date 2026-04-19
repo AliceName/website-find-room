@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { uploadMultipleRoomImages } from "@/lib/services/storage.service";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -239,24 +240,20 @@ export default function PostPage() {
                 await supabase.from("roomamenities").insert(amenityInserts);
             }
 
-            // 5. Upload images
-            const imageInserts: { room_id: string; image_url: string; is_360: boolean }[] = [];
-            for (const file of form.images) {
-                const ext = file.name.split(".").pop();
-                const fileName = `${roomData.room_id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+            // 5. Upload images using storage service
+            if (form.images.length > 0) {
+                const uploadResult = await uploadMultipleRoomImages(
+                    form.images,
+                    roomData.room_id
+                );
 
-                const { error: upErr } = await supabase.storage
-                    .from("room-images")
-                    .upload(fileName, file);
-
-                if (!upErr) {
-                    const { data: { publicUrl } } = supabase.storage.from("room-images").getPublicUrl(fileName);
-                    imageInserts.push({ room_id: roomData.room_id, image_url: publicUrl, is_360: false });
+                // Check for errors
+                if (!uploadResult.success && uploadResult.errors) {
+                    const errorMsgs = uploadResult.errors.join("; ");
+                    console.warn("Lỗi upload ảnh: " + errorMsgs);
+                    setError("Lỗi upload một số ảnh: " + errorMsgs);
+                    return;
                 }
-            }
-
-            if (imageInserts.length > 0) {
-                await supabase.from("roomimages").insert(imageInserts);
             }
 
             // 6. Create post
@@ -496,7 +493,10 @@ export default function PostPage() {
                             <Field label="Đường link VR / ảnh 360°">
                                 <input type="url" value={form.vr_url} onChange={e => update("vr_url", e.target.value)}
                                     placeholder="https://..." className={inputCls} />
-                                <p className="text-xs text-gray-400 mt-1">Dán link từ Matterport, Google Street View...</p>
+                                <p className="text-xs text-gray-500 mt-2 space-y-1">
+                                    <span className="block">✓ Hỗ trợ: Google Maps Embed, Matterport, YouTube 360°</span>
+                                    <span className="block text-gray-400">Lưu ý: Dùng URL nhúng (embed), không dùng link chia sẻ thông thường</span>
+                                </p>
                             </Field>
 
                             {/* Summary */}
