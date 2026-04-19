@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import PostCard from "@/components/rooms/PostCard";
@@ -29,12 +30,13 @@ interface PostWithDetails {
     } | null;
 }
 
-export default function RoomsPage() {
+function RoomsContent() {
+    const searchParams = useSearchParams();
     const [posts, setPosts] = useState<PostWithDetails[]>([]);
     const [filtered, setFiltered] = useState<PostWithDetails[]>([]);
     const [loading, setLoading] = useState(true);
     const [amenities, setAmenities] = useState<any[]>([]);
-    
+
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 9;
@@ -45,6 +47,14 @@ export default function RoomsPage() {
     useEffect(() => {
         fetchData();
     }, []);
+
+    // Handle search from navbar
+    useEffect(() => {
+        const searchQuery = searchParams.get('search');
+        if (searchQuery && posts.length > 0) {
+            handleSearch({ keyword: searchQuery });
+        }
+    }, [searchParams, posts]);
 
     const fetchData = async () => {
         setLoading(true);
@@ -149,9 +159,9 @@ export default function RoomsPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <>
             {/* Header */}
-            <div className="bg-white border-b border-gray-100 pt-6 pb-4 px-4 sticky top-0 z-10">
+            <div className="bg-white border-b border-gray-100 py-6 px-4">
                 <div className="max-w-7xl mx-auto">
                     <div className="flex items-center justify-between mb-4">
                         <div>
@@ -198,7 +208,7 @@ export default function RoomsPage() {
                 ) : (
                     <>
                         {/* Results Info */}
-                        <div className="mb-6 flex items-center justify-between">
+                        <div className="mb-6 flex items-center justify-between flex-wrap gap-2">
                             <div className="flex gap-2 flex-wrap">
                                 <Badge variant="info" size="md">
                                     📊 {filtered.length} kết quả
@@ -234,6 +244,16 @@ export default function RoomsPage() {
                     </>
                 )}
             </div>
+        </>
+    );
+}
+
+export default function RoomsPage() {
+    return (
+        <div className="min-h-screen bg-gray-50">
+            <Suspense fallback={<div className="min-h-screen bg-gray-50" />}>
+                <RoomsContent />
+            </Suspense>
         </div>
     );
 }

@@ -10,6 +10,7 @@ export default function Navbar() {
     const [user, setUser] = useState<any>(null);
     const [userRole, setUserRole] = useState<string | null>(null);
     const [mobileOpen, setMobileOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
 
     useEffect(() => {
         supabase.auth.getUser().then(({ data: { user } }) => {
@@ -44,6 +45,14 @@ export default function Navbar() {
         router.refresh();
     };
 
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (searchQuery.trim()) {
+            router.push(`/rooms?search=${encodeURIComponent(searchQuery)}`);
+            setSearchQuery("");
+        }
+    };
+
     // Hide on auth pages
     const isAuthPage = pathname?.startsWith("/auth");
     if (isAuthPage) return null;
@@ -58,14 +67,18 @@ export default function Navbar() {
                     </Link>
 
                     {/* SEARCH - desktop */}
-                    <div className="flex-grow max-w-md hidden md:block">
-                        <Link href="/rooms" className="block">
-                            <div className="flex items-center bg-gray-100 hover:bg-gray-200 rounded-2xl py-2.5 pl-11 pr-4 text-sm text-gray-400 transition-colors relative cursor-text">
-                                <span className="absolute left-4 text-gray-400">🔍</span>
-                                Tìm phòng, khu vực...
-                            </div>
-                        </Link>
-                    </div>
+                    <form onSubmit={handleSearch} className="flex-grow max-w-md hidden md:block">
+                        <div className="flex items-center bg-gray-100 hover:bg-gray-150 rounded-2xl py-2.5 px-4 transition-colors">
+                            <span className="text-gray-400 mr-2">🔍</span>
+                            <input
+                                type="text"
+                                placeholder="Tìm phòng, khu vực..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="flex-1 bg-transparent text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none font-medium"
+                            />
+                        </div>
+                    </form>
 
                     {/* DESKTOP NAV */}
                     <div className="hidden lg:flex items-center gap-1">
@@ -122,12 +135,24 @@ export default function Navbar() {
             {mobileOpen && (
                 <div className="lg:hidden border-t border-gray-100 bg-white px-4 py-4 space-y-1">
                     {/* Search on mobile */}
-                    <Link href="/rooms" onClick={() => setMobileOpen(false)}>
-                        <div className="flex items-center bg-gray-50 rounded-2xl py-3 pl-10 pr-4 text-sm text-gray-400 relative mb-3">
-                            <span className="absolute left-4">🔍</span>
-                            Tìm phòng, khu vực...
+                    <form onSubmit={handleSearch} className="mb-3">
+                        <div className="flex items-center bg-gray-50 rounded-2xl py-2 pl-3 pr-1">
+                            <span className="text-gray-400 text-lg mr-2">🔍</span>
+                            <input
+                                type="text"
+                                placeholder="Tìm phòng..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="flex-1 bg-transparent text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none font-medium"
+                            />
+                            <button
+                                type="submit"
+                                className="px-3 py-2 text-blue-600 hover:bg-gray-100 rounded-xl transition-all"
+                            >
+                                🔎
+                            </button>
                         </div>
-                    </Link>
+                    </form>
 
                     <MobileNavLink href="/rooms" onClick={() => setMobileOpen(false)}>🏠 Tìm phòng</MobileNavLink>
 

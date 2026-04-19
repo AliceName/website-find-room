@@ -96,79 +96,106 @@ export default function SearchFilter({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4 md:p-6 space-y-4">
-      {/* Search Keyword */}
-      <div>
-        <Input
-          type="text"
-          placeholder="Tìm kiếm phòng trọ..."
-          value={filters.keyword || ""}
-          onChange={(e) =>
-            setFilters((prev) => ({ ...prev, keyword: e.target.value }))
-          }
-          icon="🔍"
-        />
+    <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4 md:p-5 space-y-3">
+      {/* Main Row: Keyword + Advanced Toggle + Search Button */}
+      <div className="flex gap-2 flex-wrap md:flex-nowrap items-end">
+        <div className="flex-grow min-w-[200px]">
+          <Input
+            type="text"
+            placeholder="Tìm kiếm phòng trọ..."
+            value={filters.keyword || ""}
+            onChange={(e) =>
+              setFilters((prev) => ({ ...prev, keyword: e.target.value }))
+            }
+            icon="🔍"
+          />
+        </div>
+
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="px-4 py-2.5 bg-gray-100 hover:bg-gray-150 rounded-lg font-bold text-sm text-gray-700 transition whitespace-nowrap"
+        >
+          {isExpanded ? "⬆️ Ẩn bộ lọc" : "⬇️ Bộ lọc"}
+        </button>
+
+        <Button
+          variant="primary"
+          className="whitespace-nowrap"
+          onClick={handleSearch}
+        >
+          🔍 Tìm
+        </Button>
       </div>
 
-      {/* Expandable Filters */}
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
-      >
-        <span className="font-bold text-gray-700">Bộ lọc nâng cao</span>
-        <span className="text-lg">{isExpanded ? "▼" : "▶"}</span>
-      </button>
-
+      {/* Expandable Advanced Filters */}
       {isExpanded && (
-        <div className="space-y-6 pt-4 border-t border-gray-200">
-          {/* Location */}
-          <LocationSelect
-            city={filters.city}
-            district={filters.district}
-            ward={filters.ward}
-            onLocationChange={handleLocationChange}
-          />
+        <div className="border-t border-gray-200 pt-4 space-y-4">
+          {/* Grid Layout for Filters */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Location */}
+            <div>
+              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
+                📍 Địa điểm
+              </label>
+              <LocationSelect
+                city={filters.city}
+                district={filters.district}
+                ward={filters.ward}
+                onLocationChange={handleLocationChange}
+              />
+            </div>
 
-          {/* Room Type */}
-          <div>
-            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
-              Loại phòng
-            </label>
-            <select
-              value={filters.roomType || ""}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, roomType: e.target.value }))
-              }
-              className="w-full px-4 py-2.5 text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">-- Tất cả loại --</option>
-              {ROOM_TYPES.map((type) => (
-                <option key={type.value} value={type.value}>
-                  {type.label}
-                </option>
-              ))}
-            </select>
+            {/* Room Type */}
+            <div>
+              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
+                🏠 Loại phòng
+              </label>
+              <select
+                value={filters.roomType || ""}
+                onChange={(e) =>
+                  setFilters((prev) => ({ ...prev, roomType: e.target.value }))
+                }
+                className="w-full px-3 py-2.5 text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">-- Tất cả --</option>
+                {ROOM_TYPES.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Price Range */}
+            <div>
+              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
+                💰 Giá (đ/tháng)
+              </label>
+              <PriceRange
+                minPrice={filters.minPrice}
+                maxPrice={filters.maxPrice}
+                onPriceChange={handlePriceChange}
+              />
+            </div>
+
+            {/* Area Range */}
+            <div>
+              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
+                📐 Diện tích (m²)
+              </label>
+              <AreaRange
+                minArea={filters.minArea}
+                maxArea={filters.maxArea}
+                onAreaChange={handleAreaChange}
+              />
+            </div>
           </div>
 
-          {/* Price Range */}
-          <PriceRange
-            minPrice={filters.minPrice}
-            maxPrice={filters.maxPrice}
-            onPriceChange={handlePriceChange}
-          />
-
-          {/* Area Range */}
-          <AreaRange
-            minArea={filters.minArea}
-            maxArea={filters.maxArea}
-            onAreaChange={handleAreaChange}
-          />
-
-          {/* Amenities */}
+          {/* Amenities - Full Width */}
           {amenities.length > 0 && (
-            <div>
+            <div className="border-t border-gray-200 pt-3">
               <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-3">
-                Tiện ích
+                ✨ Tiện ích
               </label>
               <div className="flex flex-wrap gap-2">
                 {amenities.map((amenity) => (
@@ -183,26 +210,19 @@ export default function SearchFilter({
               </div>
             </div>
           )}
+
+          {/* Reset Button */}
+          <div className="flex justify-end pt-2">
+            <Button
+              variant="ghost"
+              onClick={handleReset}
+              className="text-sm"
+            >
+              🔄 Xóa bộ lọc
+            </Button>
+          </div>
         </div>
       )}
-
-      {/* Actions */}
-      <div className="flex gap-3 pt-2 border-t border-gray-200">
-        <Button
-          variant="ghost"
-          className="flex-1"
-          onClick={handleReset}
-        >
-          Xóa bộ lọc
-        </Button>
-        <Button
-          variant="primary"
-          className="flex-1"
-          onClick={handleSearch}
-        >
-          🔍 Tìm kiếm
-        </Button>
-      </div>
     </div>
   );
 }
