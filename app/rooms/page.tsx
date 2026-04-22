@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import PostCard from "@/components/rooms/PostCard";
+import MapView from "@/components/map/MapView";
 import {
   SearchFilter,
   Pagination,
@@ -24,6 +25,8 @@ interface PostWithDetails {
         room_area: number | null;
         room_status: boolean | null;
         vr_url: string | null;
+        latitude: number | string | null;
+        longitude: number | string | null;
         room_types: { room_type_id: string; room_type_name: string } | null;
         roomimages: { image_url: string; is_360: boolean | null }[];
         locations: { location_id: string; city: string; district: string; ward: string } | null;
@@ -72,6 +75,8 @@ function RoomsContent() {
                             room_area,
                             room_status,
                             vr_url,
+                            latitude,
+                            longitude,
                             room_types:room_type_id ( room_type_id, room_type_name ),
                             roomimages ( image_url, is_360 ),
                             locations:location_id ( location_id, city, district, ward )
@@ -160,7 +165,6 @@ function RoomsContent() {
 
     return (
         <>
-            {/* Header */}
             <div className="bg-white border-b border-gray-100 py-6 px-4">
                 <div className="max-w-7xl mx-auto">
                     <div className="flex items-center justify-between mb-4">
@@ -182,7 +186,6 @@ function RoomsContent() {
                         </Link>
                     </div>
 
-                    {/* Search Filter Component */}
                     <SearchFilter
                         onSearch={handleSearch}
                         onReset={handleReset}
@@ -191,8 +194,16 @@ function RoomsContent() {
                 </div>
             </div>
 
-            {/* Content */}
-            <div className="max-w-7xl mx-auto px-4 py-8">
+            <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+                <div className="h-[420px] rounded-3xl overflow-hidden border border-gray-200 shadow-sm bg-white">
+                    <MapView
+                        posts={filtered as any}
+                        filters={{
+                            keyword: searchParams.get('search') || '',
+                        }}
+                    />
+                </div>
+
                 {loading ? (
                     <Loader fullScreen={false} text="Đang tải phòng trọ..." />
                 ) : filtered.length === 0 ? (
@@ -207,7 +218,6 @@ function RoomsContent() {
                     />
                 ) : (
                     <>
-                        {/* Results Info */}
                         <div className="mb-6 flex items-center justify-between flex-wrap gap-2">
                             <div className="flex gap-2 flex-wrap">
                                 <Badge variant="info" size="md">
@@ -219,7 +229,6 @@ function RoomsContent() {
                             </div>
                         </div>
 
-                        {/* Posts Grid */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                             {paginatedPosts.map((post) => (
                                 <Link
@@ -231,7 +240,6 @@ function RoomsContent() {
                             ))}
                         </div>
 
-                        {/* Pagination */}
                         {totalPages > 1 && (
                             <Pagination
                                 currentPage={currentPage}

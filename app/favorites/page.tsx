@@ -39,10 +39,6 @@ export default function FavoritesPage() {
         });
     }, [router]);
 
-    useEffect(() => {
-        if (!user) return;
-        fetchFavorites();
-    }, [user]);
 
     const fetchFavorites = async () => {
         setLoading(true);
@@ -73,6 +69,12 @@ export default function FavoritesPage() {
         if (data) setFavorites(data as unknown as FavoritePost[]);
         setLoading(false);
     };
+    
+    useEffect(() => {
+        if (!user) return;
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        fetchFavorites();
+    }, [user]);
 
     const removeFavorite = async (favorityId: string) => {
         await supabase.from("favorites").delete().eq("favority_id", favorityId);

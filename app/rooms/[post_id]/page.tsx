@@ -1,10 +1,9 @@
-import RoomGallery from '@/components/rooms/RoomGallery'
+import RoomVirtualSection from '@/components/rooms/RoomVirtualSection'
 import ReviewSection from '@/components/rooms/ReviewSection'
 import FavoriteButton from '@/components/rooms/FavoriteButton'
-import { Badge, ContactButton, VirtualTourViewer } from '@/components/common'
+import { Badge, ContactButton } from '@/components/common'
 import { supabase } from '@/lib/supabaseClient'
 import { notFound } from 'next/navigation'
-import Image from 'next/image'
 import { Database } from '@/types/supabase'
 import '@/app/globals.css'
 
@@ -46,8 +45,10 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ pos
     const post = data as unknown as PostDetail;
     const room = post.rooms;
     const normalImages = room?.roomimages.filter(img => !img.is_360) || [];
-    const vrImage = room?.roomimages.find(img => img.is_360);
-    const finalVrUrl = room?.vr_url || vrImage?.image_url || null;
+    const vrImages = room?.roomimages
+        .filter((img) => img.is_360)
+        .map((img) => img.image_url) || [];
+    const externalVrUrl = room?.vr_url || null;
     const amenities = room?.roomamenities?.map(ra => ra.amenities?.amenity_name).filter(Boolean) || [];
 
     const location = room?.locations;
@@ -131,14 +132,17 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ pos
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
                 {/* LEFT COLUMN */}
                 <div className="lg:col-span-8 space-y-10">
-                    {/* VR Tour */}
-                    {finalVrUrl && <VirtualTourViewer url={finalVrUrl} />}
-
-                    {/* Gallery */}
-                    {normalImages.length > 0 && <RoomGallery images={normalImages} />}
+                    {/* Unified media section: normal images + 360 + external tour */}
+                    {(normalImages.length > 0 || vrImages.length > 0 || externalVrUrl) && (
+                        <RoomVirtualSection
+                            normalImages={normalImages.map((img) => img.image_url)}
+                            vrImages={vrImages}
+                            externalVrUrl={externalVrUrl}
+                        />
+                    )}
 
                     {/* No images placeholder */}
-                    {!finalVrUrl && normalImages.length === 0 && (
+                    {!externalVrUrl && vrImages.length === 0 && normalImages.length === 0 && (
                         <div className="rounded-[3rem] bg-gray-100 h-64 flex items-center justify-center">
                             <div className="text-center">
                                 <span className="text-6xl">🏠</span>
