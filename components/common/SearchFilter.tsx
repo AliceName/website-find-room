@@ -11,6 +11,8 @@ import AmenityTag from "./AmenityTag";
 interface SearchFilterProps {
   onSearch?: (filters: SearchFilters) => void;
   onReset?: () => void;
+  onMapClick?: () => void;
+  isMapOpen?: boolean;
   amenities?: Array<{ amenity_id: string; amenity_name: string; icon?: string }>;
 }
 
@@ -37,6 +39,8 @@ const ROOM_TYPES = [
 export default function SearchFilter({
   onSearch,
   onReset,
+  onMapClick,
+  isMapOpen,
   amenities = [],
 }: SearchFilterProps) {
   const [filters, setFilters] = useState<SearchFilters>({
@@ -202,6 +206,17 @@ export default function SearchFilter({
         >
           🔍 Tìm kiếm
         </Button>
+
+        <button
+          type="button"
+          className={`flex-1 px-4 py-2 rounded-lg font-bold transition-all flex items-center justify-center gap-2 ${isMapOpen
+            ? "bg-red-50 text-red-600 border border-red-200"
+            : "bg-green-600 text-white hover:bg-green-700"
+            }`}
+          onClick={onMapClick} // <--- Gọi hàm này
+        >
+          {isMapOpen ? "✕ Đóng bản đồ" : "📍 Xem Bản đồ"}
+        </button>
       </div>
     </div>
   );
