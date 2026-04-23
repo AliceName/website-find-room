@@ -6,6 +6,16 @@ export type LocationResult = {
   type: string; // "administrative", "city", "district", "house"...
   importance: number; // 0.0 → 1.0
   display_name: string;
+  address?: {
+    city?: string;
+    district?: string;
+    ward?: string;
+    address_detail?: string;
+    full_address?: string;
+    road?: string;
+    house_number?: string;
+    suburb?: string;
+  };
   // ✅ Kết quả phân tích — MapController dùng cái này để quyết định có lọc 20km không
   isGeographic: boolean;
 };
@@ -49,19 +59,26 @@ export async function geocodeAddress(
 
     const data = await res.json();
 
-    if (!data || data.error || !data.lat) return null;
+    if (!data || data.error || data.lat === undefined || data.lng === undefined) {
+      return null;
+    }
 
     // ✅ Phân tích xem có phải địa danh hành chính không
     const isGeographic =
       (GEOGRAPHIC_CLASSES.has(data.class) || GEOGRAPHIC_TYPES.has(data.type)) &&
       (data.importance ?? 0) >= IMPORTANCE_THRESHOLD;
 
+    const lat = Number(data.lat);
+    const lng = Number(data.lng);
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+
     const result: LocationResult = {
-      lat: Number(data.lat),
-      lng: Number(data.lng),
+      lat,
+      lng,
       class: data.class ?? "",
       type: data.type ?? "",
-      importance: data.importance ?? 0,
+      importance: Number(data.importance ?? 0),
       display_name: data.display_name ?? "",
       isGeographic,
     };

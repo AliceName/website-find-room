@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, use, useMemo } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import ImageUploader from "@/components/common/ImageUploader";
+import VietnamAddressSelect from "@/components/common/VietnamAddressSelect";
+import PostLocationPicker from "@/components/map/PostLocationPicker";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -25,6 +27,7 @@ interface FormData {
     city: string;
     district: string;
     ward: string;
+    address_detail: string;
     room_description: string;
     vr_url: string;
     room_status: boolean;
@@ -39,6 +42,9 @@ export default function EditPostPage({ params }: { params: Promise<{ post_id: st
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
+    const [latitude, setLatitude] = useState<number | null>(null);
+    const [longitude, setLongitude] = useState<number | null>(null);
+    const [addressDetailHint, setAddressDetailHint] = useState<string>("");
 
     const [form, setForm] = useState<FormData>({
         post_title: "",
@@ -48,6 +54,7 @@ export default function EditPostPage({ params }: { params: Promise<{ post_id: st
         city: "TP. Hồ Chí Minh",
         district: "",
         ward: "",
+        address_detail: "",
         room_description: "",
         vr_url: "",
         room_status: true,
@@ -111,10 +118,14 @@ export default function EditPostPage({ params }: { params: Promise<{ post_id: st
                     city: location?.city || "TP. Hồ Chí Minh",
                     district: location?.district || "",
                     ward: location?.ward || "",
+                    address_detail: room.full_address || room.address_detail || "",
                     room_description: room.room_description || "",
                     vr_url: room.vr_url || "",
                     room_status: room.room_status !== false,
                 });
+
+                setLatitude(room.latitude ?? null);
+                setLongitude(room.longitude ?? null);
 
                 setLoading(false);
             } catch (err: any) {
@@ -135,6 +146,43 @@ export default function EditPostPage({ params }: { params: Promise<{ post_id: st
     const update = (key: keyof FormData, value: string | boolean) =>
         setForm(prev => ({ ...prev, [key]: value }));
 
+    const handleAddressChange = (city: string, district: string, ward: string) => {
+        setForm(prev => ({ ...prev, city, district, ward }));
+    };
+
+    const handleLocationChange = (value: { latitude: number | null; longitude: number | null }) => {
+        setLatitude(value.latitude);
+        setLongitude(value.longitude);
+    };
+
+    const handleReverseGeocode = (data: {
+        city?: string;
+        district?: string;
+        ward?: string;
+        address_detail?: string;
+        full_address?: string;
+    }) => {
+        if (data.city) setForm(prev => ({ ...prev, city: data.city ?? prev.city }));
+        if (data.district) setForm(prev => ({ ...prev, district: data.district ?? prev.district }));
+        if (data.ward) setForm(prev => ({ ...prev, ward: data.ward ?? prev.ward }));
+        if (data.address_detail) {
+            setForm(prev => ({ ...prev, address_detail: data.address_detail ?? prev.address_detail }));
+            setAddressDetailHint(data.address_detail);
+        }
+    };
+
+    const handleResetPin = async () => {
+        const query = [form.city, form.district, form.ward, form.address_detail].filter(Boolean).join(", ");
+        if (!query) return;
+
+        const res = await fetch(`/api/geocode?q=${encodeURIComponent(query)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data?.lat || !data?.lng) return;
+        setLatitude(Number(data.lat));
+        setLongitude(Number(data.lng));
+    };
+
     const handleSubmit = async () => {
         setSubmitting(true);
         setError(null);
@@ -145,8 +193,11 @@ export default function EditPostPage({ params }: { params: Promise<{ post_id: st
             if (!form.room_price || Number(form.room_price) <= 0) throw new Error("Vui lòng nhập giá thuê hợp lệ.");
             if (!form.room_area || Number(form.room_area) <= 0) throw new Error("Vui lòng nhập diện tích hợp lệ.");
             if (!form.room_description.trim()) throw new Error("Vui lòng nhập mô tả căn phòng.");
+            if (!form.city.trim()) throw new Error("Vui lòng chọn tỉnh / thành phố.");
+            if (!form.district.trim()) throw new Error("Vui lòng chọn quận / huyện.");
+            if (!form.ward.trim()) throw new Error("Vui lòng chọn phường / xã.");
+            if (latitude === null || longitude === null) throw new Error("Vui lòng chọn vị trí trên mini map.");
 
-            // Update location
             if (locationId) {
                 const { error: locErr } = await supabase
                     .from("locations")
@@ -155,7 +206,6 @@ export default function EditPostPage({ params }: { params: Promise<{ post_id: st
                 if (locErr) throw new Error("Lỗi cập nhật địa điểm: " + locErr.message);
             }
 
-            // Get room_type_id
             const roomTypeLabel = ROOM_TYPES.find(t => t.value === form.room_type)?.label ?? "";
             const { data: typeData } = await supabase
                 .from("roomtypes")
@@ -163,7 +213,6 @@ export default function EditPostPage({ params }: { params: Promise<{ post_id: st
                 .eq("room_type_name", roomTypeLabel)
                 .maybeSingle();
 
-            // Update room
             if (roomId) {
                 const { error: roomErr } = await supabase
                     .from("rooms")
@@ -174,12 +223,15 @@ export default function EditPostPage({ params }: { params: Promise<{ post_id: st
                         room_type_id: typeData?.room_type_id ?? null,
                         room_status: form.room_status,
                         vr_url: form.vr_url || null,
+                        address_detail: form.address_detail || null,
+                        full_address: [form.address_detail, form.ward, form.district, form.city].filter(Boolean).join(", "),
+                        latitude,
+                        longitude,
                     })
                     .eq("room_id", roomId);
                 if (roomErr) throw new Error("Lỗi cập nhật phòng: " + roomErr.message);
             }
 
-            // Update post - dùng đúng tên field post_update_at
             const { error: postErr } = await supabase
                 .from("posts")
                 .update({
@@ -232,14 +284,12 @@ export default function EditPostPage({ params }: { params: Promise<{ post_id: st
                 )}
 
                 <div className="bg-white rounded-[2.5rem] shadow-xl border border-gray-100 p-8 md:p-10 space-y-6">
-                    {/* Tiêu đề */}
                     <div>
                         <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Tiêu đề bài đăng</label>
                         <input type="text" value={form.post_title} onChange={e => update("post_title", e.target.value)}
                             placeholder="VD: Phòng trọ sạch đẹp gần HUTECH" className={inputCls} />
                     </div>
 
-                    {/* Loại phòng */}
                     <div>
                         <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Loại phòng</label>
                         <select value={form.room_type} onChange={e => update("room_type", e.target.value)} className={inputCls}>
@@ -247,7 +297,6 @@ export default function EditPostPage({ params }: { params: Promise<{ post_id: st
                         </select>
                     </div>
 
-                    {/* Trạng thái */}
                     <div>
                         <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-3">Trạng thái phòng</label>
                         <div className="grid grid-cols-2 gap-3">
@@ -271,7 +320,6 @@ export default function EditPostPage({ params }: { params: Promise<{ post_id: st
                         </div>
                     </div>
 
-                    {/* Giá & Diện tích */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Giá thuê (đ/tháng)</label>
@@ -285,32 +333,47 @@ export default function EditPostPage({ params }: { params: Promise<{ post_id: st
                         </div>
                     </div>
 
-                    {/* Địa chỉ */}
                     <div>
-                        <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Thành phố</label>
-                        <input type="text" value={form.city} onChange={e => update("city", e.target.value)} className={inputCls} />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Quận/Huyện</label>
-                            <input type="text" value={form.district} onChange={e => update("district", e.target.value)}
-                                placeholder="VD: Quận 9" className={inputCls} />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Phường/Xã</label>
-                            <input type="text" value={form.ward} onChange={e => update("ward", e.target.value)}
-                                placeholder="VD: Long Bình" className={inputCls} />
-                        </div>
+                        <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-3">📍 Địa chỉ</label>
+                        <VietnamAddressSelect
+                            city={form.city}
+                            district={form.district}
+                            ward={form.ward}
+                            onAddressChange={handleAddressChange}
+                            required
+                        />
                     </div>
 
-                    {/* Mô tả */}
+                    <div>
+                        <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Số nhà / Tên đường</label>
+                        <input
+                            type="text"
+                            value={form.address_detail}
+                            onChange={e => update("address_detail", e.target.value)}
+                            placeholder="VD: 123 Đường Hà Huy Giáp"
+                            className={inputCls}
+                        />
+                    </div>
+
+                    <div>
+                        <PostLocationPicker
+                            addressDetail={form.address_detail}
+                            city={form.city}
+                            district={form.district}
+                            ward={form.ward}
+                            latitude={latitude}
+                            longitude={longitude}
+                            onChange={handleLocationChange}
+                            onReverseGeocode={handleReverseGeocode}
+                        />
+                    </div>
+
                     <div>
                         <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Mô tả chi tiết</label>
                         <textarea value={form.room_description} onChange={e => update("room_description", e.target.value)}
                             placeholder="Mô tả đặc điểm, tiện ích của phòng..." rows={4} className={inputCls} />
                     </div>
 
-                    {/* Hình ảnh */}
                     {roomId && (
                         <div>
                             <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-3">📸 Quản lý hình ảnh</label>
@@ -321,7 +384,6 @@ export default function EditPostPage({ params }: { params: Promise<{ post_id: st
                         </div>
                     )}
 
-                    {/* VR URL */}
                     <div>
                         <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Link tour ảo 360° (tùy chọn)</label>
                         <input type="url" value={form.vr_url} onChange={e => update("vr_url", e.target.value)}
@@ -332,7 +394,6 @@ export default function EditPostPage({ params }: { params: Promise<{ post_id: st
                         </p>
                     </div>
 
-                    {/* Buttons */}
                     <div className="flex gap-4 pt-4">
                         <button type="button" onClick={() => router.back()}
                             className="flex-1 border-2 border-gray-200 text-gray-600 py-4 rounded-2xl font-black text-base hover:bg-gray-50 transition-all">

@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import PostCard from "@/components/rooms/PostCard";
-import dynamic from "next/dynamic";
-
+import MapView from "@/components/map/MapView";
 import {
     SearchFilter,
     Pagination,
@@ -34,8 +34,9 @@ interface PostWithDetails {
         room_area: number | null;
         room_status: boolean | null;
         vr_url: string | null;
-        latitude: number | null;   // ✅ bắt buộc có để map hoạt động
-        longitude: number | null;  // ✅ bắt buộc có để map hoạt động
+
+        latitude: number | string | null;
+        longitude: number | string | null;
         room_types: { room_type_id: string; room_type_name: string } | null;
         roomimages: { image_url: string; is_360: boolean | null }[];
         locations: { location_id: string; city: string; district: string; ward: string } | null;
@@ -43,16 +44,12 @@ interface PostWithDetails {
     } | null;
 }
 
-
-export default function RoomsPage() {
+function RoomsContent() {
+    const searchParams = useSearchParams();
     const [posts, setPosts] = useState<PostWithDetails[]>([]);
     const [filtered, setFiltered] = useState<PostWithDetails[]>([]);
     const [loading, setLoading] = useState(true);
     const [amenities, setAmenities] = useState<any[]>([]);
-
-    // UI State cho Map
-    const [isMapOpen, setIsMapOpen] = useState(false);
-    const [currentFilters, setCurrentFilters] = useState<SearchFilters | null>(null);
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
@@ -64,6 +61,14 @@ export default function RoomsPage() {
     useEffect(() => {
         fetchData();
     }, []);
+
+    // Handle search from navbar
+    useEffect(() => {
+        const searchQuery = searchParams.get('search');
+        if (searchQuery && posts.length > 0) {
+            handleSearch({ keyword: searchQuery });
+        }
+    }, [searchParams, posts]);
 
     const fetchData = async () => {
         setLoading(true);
@@ -83,6 +88,8 @@ export default function RoomsPage() {
                             longitude,
                             room_status,
                             vr_url,
+                            latitude,
+                            longitude,
                             room_types:room_type_id ( room_type_id, room_type_name ),
                             roomimages ( image_url, is_360 ),
                             locations:location_id ( location_id, city, district, ward )
@@ -196,13 +203,9 @@ export default function RoomsPage() {
     };
 
     return (
-        <div className="flex flex-col h-screen bg-white">
-            {/* Header & Filter */}
-            <div className="bg-white border-b border-gray-100 z-30 shadow-sm">
-                <div
-                    className={`mx-auto transition-all duration-500 p-4 lg:px-6 ${isMapOpen ? "max-w-full" : "max-w-7xl"
-                        }`}
-                >
+        <>
+            <div className="bg-white border-b border-gray-100 py-6 px-4">
+                <div className="max-w-7xl mx-auto">
                     <div className="flex items-center justify-between mb-4">
                         <div>
                             <h1 className="text-xl lg:text-2xl font-black text-gray-900">
@@ -232,27 +235,59 @@ export default function RoomsPage() {
                 </div>
             </div>
 
-            {/* Main Content */}
-            <main className="flex flex-1 relative ">
-                {/* Cột trái: Danh sách */}
-                <div
-                    className={`h-full overflow-y-auto transition-all duration-500 bg-gray-50 flex-shrink-0 ${isMapOpen
-                        ? "hidden lg:block lg:w-[45%] xl:w-[40%]"
-                        : "w-full"
-                        }`}
-                >
-                    <div
-                        className={`mx-auto p-4 lg:p-6 transition-all duration-500 ${isMapOpen ? "w-full" : "max-w-7xl"
-                            }`}
-                    >
-                        {loading ? (
-                            <Loader text="Đang tìm phòng..." />
-                        ) : filtered.length === 0 ? (
-                            <EmptyState
-                                icon="🏚️"
-                                title="Không tìm thấy phòng trọ"
-                                description="Hãy thử thay đổi bộ lọc hoặc tìm kiếm từ khóa khác"
-                                action={{ label: "Xem tất cả phòng", onClick: handleReset }}
+            <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+                <div className="h-[420px] rounded-3xl overflow-hidden border border-gray-200 shadow-sm bg-white">
+                    <MapView
+                        posts={filtered as any}
+                        filters={{
+                            keyword: searchParams.get('search') || '',
+                        }}
+                    />
+                </div>
+
+                {loading ? (
+                    <Loader fullScreen={false} text="Đang tải phòng trọ..." />
+                ) : filtered.length === 0 ? (
+                    <EmptyState
+                        icon="🏚️"
+                        title="Không tìm thấy phòng trọ"
+                        description="Hãy thử thay đổi bộ lọc hoặc tìm kiếm từ khóa khác"
+                        action={{
+                            label: "Xem tất cả phòng",
+                            onClick: handleReset,
+                        }}
+                    />
+                ) : (
+                    <>
+                        <div className="mb-6 flex items-center justify-between flex-wrap gap-2">
+                            <div className="flex gap-2 flex-wrap">
+                                <Badge variant="info" size="md">
+                                    📊 {filtered.length} kết quả
+                                </Badge>
+                                <Badge variant="success" size="md">
+                                    📄 Trang {currentPage}/{totalPages}
+                                </Badge>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                            {paginatedPosts.map((post) => (
+                                <Link
+                                    key={post.post_id}
+                                    href={`/rooms/${post.post_id}`}
+                                >
+                                    <PostCard post={post as any} />
+                                </Link>
+                            ))}
+                        </div>
+
+                        {totalPages > 1 && (
+                            <Pagination
+                                currentPage={currentPage}
+                                totalPages={totalPages}
+                                onPageChange={setCurrentPage}
+                                canPreviousPage={currentPage > 1}
+                                canNextPage={currentPage < totalPages}
                             />
                         ) : (
                             <>
@@ -295,17 +330,17 @@ export default function RoomsPage() {
                         </div>
                     </div>
                 )}
+            </div>
+        </>
+    );
+}
 
-                {/* Mobile FAB */}
-                <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[100]">
-                    <button
-                        onClick={() => setIsMapOpen(!isMapOpen)}
-                        className="flex items-center gap-2 bg-gray-900 text-white px-6 py-3 rounded-full font-black text-sm shadow-2xl border-2 border-white/20 active:scale-95 transition-all"
-                    >
-                        {isMapOpen ? "📋 DANH SÁCH" : "📍 BẢN ĐỒ"}
-                    </button>
-                </div>
-            </main>
+export default function RoomsPage() {
+    return (
+        <div className="min-h-screen bg-gray-50">
+            <Suspense fallback={<div className="min-h-screen bg-gray-50" />}>
+                <RoomsContent />
+            </Suspense>
         </div>
     );
 }
