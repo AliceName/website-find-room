@@ -17,7 +17,7 @@ export default function LocationSelect({
   district = "",
   ward = "",
   onLocationChange,
-  showWard = true,
+  showWard = false,
 }: LocationSelectProps) {
   const [cities, setCities] = useState<string[]>([]);
   const [districts, setDistricts] = useState<string[]>([]);
