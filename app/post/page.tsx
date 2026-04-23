@@ -1,12 +1,16 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { supabase } from "@/lib/supabaseClient";
 import { uploadRoomImage } from "@/lib/services/storage.service";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import VietnamAddressSelect from "@/components/common/VietnamAddressSelect";
-import PostLocationPicker from "@/components/map/PostLocationPicker";
+const PostLocationPicker = dynamic(
+    () => import("@/components/map/PostLocationPicker"),
+    { ssr: false }
+);
 
 const ROOM_TYPES = [
     { value: "phong_tro", label: "Phòng trọ" },
@@ -356,11 +360,10 @@ export default function PostPage() {
                 <div className="flex items-center gap-2 mb-8">
                     {STEPS.map((s, i) => (
                         <div key={s.id} className="flex items-center gap-2 flex-1">
-                            <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-black transition-all ${
-                                step > s.id ? "bg-green-500 text-white" :
+                            <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-black transition-all ${step > s.id ? "bg-green-500 text-white" :
                                 step === s.id ? "bg-blue-600 text-white shadow-lg shadow-blue-200" :
-                                "bg-gray-200 text-gray-400"
-                            }`}>
+                                    "bg-gray-200 text-gray-400"
+                                }`}>
                                 {step > s.id ? "✓" : s.id}
                             </div>
                             <span className={`text-xs font-bold hidden sm:block truncate ${step === s.id ? "text-blue-600" : "text-gray-400"}`}>
@@ -397,11 +400,10 @@ export default function PostPage() {
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                     {ROOM_TYPES.map(t => (
                                         <button key={t.value} type="button" onClick={() => update("room_type", t.value)}
-                                            className={`p-3 rounded-2xl border-2 text-sm font-bold transition-all ${
-                                                form.room_type === t.value
-                                                    ? "border-blue-600 bg-blue-50 text-blue-700"
-                                                    : "border-gray-200 text-gray-600 hover:border-gray-300"
-                                            }`}>
+                                            className={`p-3 rounded-2xl border-2 text-sm font-bold transition-all ${form.room_type === t.value
+                                                ? "border-blue-600 bg-blue-50 text-blue-700"
+                                                : "border-gray-200 text-gray-600 hover:border-gray-300"
+                                                }`}>
                                             {t.label}
                                         </button>
                                     ))}
@@ -470,9 +472,8 @@ export default function PostPage() {
                                     const selected = form.selectedAmenityIds.includes(a.amenity_id);
                                     return (
                                         <button key={a.amenity_id} type="button" onClick={() => toggleAmenity(a.amenity_id)}
-                                            className={`flex items-center gap-2.5 p-3.5 rounded-2xl border-2 text-sm font-bold transition-all text-left ${
-                                                selected ? "border-blue-600 bg-blue-50 text-blue-700" : "border-gray-200 text-gray-600 hover:border-gray-300"
-                                            }`}>
+                                            className={`flex items-center gap-2.5 p-3.5 rounded-2xl border-2 text-sm font-bold transition-all text-left ${selected ? "border-blue-600 bg-blue-50 text-blue-700" : "border-gray-200 text-gray-600 hover:border-gray-300"
+                                                }`}>
                                             <span className="text-lg">{a.icon}</span>
                                             <span className="truncate">{a.amenity_name}</span>
                                             {selected && <span className="ml-auto text-blue-600 text-xs">✓</span>}
@@ -502,33 +503,30 @@ export default function PostPage() {
                                 <button
                                     type="button"
                                     onClick={() => setUpload360Mode(false)}
-                                    className={`flex-1 px-4 py-2.5 rounded-lg font-bold text-sm transition-all ${
-                                        !upload360Mode
-                                            ? "bg-white text-blue-600 shadow-md"
-                                            : "text-gray-600 hover:text-gray-700"
-                                    }`}
+                                    className={`flex-1 px-4 py-2.5 rounded-lg font-bold text-sm transition-all ${!upload360Mode
+                                        ? "bg-white text-blue-600 shadow-md"
+                                        : "text-gray-600 hover:text-gray-700"
+                                        }`}
                                 >
                                     📸 Ảnh thường ({normalImages.length})
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setUpload360Mode(true)}
-                                    className={`flex-1 px-4 py-2.5 rounded-lg font-bold text-sm transition-all ${
-                                        upload360Mode
-                                            ? "bg-white text-blue-600 shadow-md"
-                                            : "text-gray-600 hover:text-gray-700"
-                                    }`}
+                                    className={`flex-1 px-4 py-2.5 rounded-lg font-bold text-sm transition-all ${upload360Mode
+                                        ? "bg-white text-blue-600 shadow-md"
+                                        : "text-gray-600 hover:text-gray-700"
+                                        }`}
                                 >
                                     🌐 Ảnh 360° ({images360.length})
                                 </button>
                             </div>
 
                             <div onClick={() => fileInputRef.current?.click()}
-                                className={`border-2 border-dashed rounded-3xl p-8 text-center cursor-pointer transition-all ${
-                                    upload360Mode
-                                        ? "border-purple-300 bg-purple-50/50 hover:bg-purple-50"
-                                        : "border-blue-300 bg-blue-50/50 hover:bg-blue-50"
-                                }`}>
+                                className={`border-2 border-dashed rounded-3xl p-8 text-center cursor-pointer transition-all ${upload360Mode
+                                    ? "border-purple-300 bg-purple-50/50 hover:bg-purple-50"
+                                    : "border-blue-300 bg-blue-50/50 hover:bg-blue-50"
+                                    }`}>
                                 <p className="text-4xl mb-3">{upload360Mode ? "🌐" : "🖼️"}</p>
                                 <p className={`font-bold ${upload360Mode ? "text-purple-700" : "text-blue-700"}`}>
                                     Nhấp để chọn ảnh {upload360Mode ? "360°" : "thường"}

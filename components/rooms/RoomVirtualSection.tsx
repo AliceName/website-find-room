@@ -91,11 +91,10 @@ export default function RoomVirtualSection({ normalImages, vrImages, externalVrU
                     key={`${item.url}-${realIndex}`}
                     type="button"
                     onClick={() => setActiveIndex(realIndex)}
-                    className={`relative w-28 h-20 rounded-2xl overflow-hidden border-2 shrink-0 transition-all ${
-                      selected
+                    className={`relative w-28 h-20 rounded-2xl overflow-hidden border-2 shrink-0 transition-all ${selected
                         ? "border-blue-500 ring-2 ring-blue-200"
                         : "border-white hover:border-blue-300"
-                    }`}
+                      }`}
                     title={`Xem media #${realIndex + 1}`}
                   >
                     {item.kind === "external" ? (
@@ -117,13 +116,12 @@ export default function RoomVirtualSection({ normalImages, vrImages, externalVrU
                         Đang xem
                       </span>
                     )}
-                    <span className={`absolute bottom-1 left-1 text-[9px] px-1.5 py-0.5 rounded-lg font-black text-white ${
-                      item.kind === "normal"
+                    <span className={`absolute bottom-1 left-1 text-[9px] px-1.5 py-0.5 rounded-lg font-black text-white ${item.kind === "normal"
                         ? "bg-gray-700/90"
                         : item.kind === "panorama"
                           ? "bg-purple-600/90"
                           : "bg-blue-600/90"
-                    }`}>
+                      }`}>
                       {item.kind === "normal" ? "Ảnh" : item.kind === "panorama" ? "360°" : "Tour"}
                     </span>
                   </button>

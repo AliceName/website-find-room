@@ -6,33 +6,37 @@ import { supabase } from '@/lib/supabaseClient'
 import { notFound } from 'next/navigation'
 import { Database } from '@/types/supabase'
 import '@/app/globals.css'
-import Rating from '@/components/common/rating'
-import CommentInput from "@/components/rooms/CommentInput";
 
 type PostDetail = Database['public']['Tables']['posts']['Row'] & {
     rooms: (Database['public']['Tables']['rooms']['Row'] & {
         room_types: { room_type_name: string } | null;
-        roomimages: { image_url: string; is_360: boolean }[];
+        roomimages: { image_url: string; is_360: boolean | null }[];
+        locations: { city: string; district: string; ward: string } | null;
+        roomamenities: {
+            amenities: { amenity_name: string } | null;
+        }[];
     }) | null;
     users: { user_name: string; user_phone: string | null; user_email: string } | null;
 };
 
-
 export default async function RoomDetailPage({ params }: { params: Promise<{ post_id: string }> }) {
-
     const { post_id } = await params;
 
-    // Truy vấn theo post_id duy nhất
     const { data, error } = await supabase
         .from('posts')
         .select(`
-      *,
-      rooms:room_id (
-        *,
-        room_types:room_type_id ( room_type_name ),
-        roomimages ( image_url, is_360 )
-      )
-    `)
+            *,
+            rooms:room_id (
+                *,
+                room_types:room_type_id ( room_type_name ),
+                roomimages ( image_url, is_360 ),
+                locations:location_id ( city, district, ward ),
+                roomamenities (
+                    amenities:amenity_id ( amenity_name )
+                )
+            ),
+            users:user_id ( user_name, user_phone, user_email )
+        `)
         .eq('post_id', post_id)
         .single();
 
@@ -191,36 +195,53 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ pos
                                     👤
                                 </div>
                                 <div>
-                                    <p className="text-blue-400 text-[10px] font-black uppercase tracking-widest">Hỗ trợ sinh viên</p>
-                                    <h4 className="font-bold text-xl">Chủ sở hữu tin đăng</h4>
+                                    <p className="text-blue-100 text-xs font-bold uppercase tracking-widest">Chủ tin đăng</p>
+                                    <h4 className="font-bold text-lg">{post.users?.user_name || 'Chủ trọ'}</h4>
                                 </div>
                             </div>
 
                             <div className="space-y-4">
-                                <button className="w-full bg-blue-600 hover:bg-blue-500 py-6 rounded-2xl font-black text-xl transition-all shadow-lg active:scale-95 flex items-center justify-center gap-4">
-                                    <span>📞</span> GỌI CHỦ TRỌ
-                                </button>
-                                <button className="w-full bg-white/10 hover:bg-white/20 py-6 rounded-2xl font-black text-xl transition-all border border-white/10 flex items-center justify-center gap-4">
-                                    <span>💬</span> CHAT ZALO
-                                </button>
+                                <ContactButton
+                                    ownerPhone={post.users?.user_phone}
+                                    ownerEmail={post.users?.user_email}
+                                    ownerName={post.users?.user_name}
+                                    roomTitle={post.post_title}
+                                />
                             </div>
 
-                            <div className="mt-10 pt-8 border-t border-white/10 text-center">
-                                <p className="text-gray-400 text-[10px] font-medium tracking-tighter uppercase">
-                                    Tin đăng đã được HUTECH Room Finder xác thực
+                            <div className="mt-8 pt-6 border-t border-white/20 text-center">
+                                <p className="text-blue-100 text-xs font-medium uppercase tracking-tighter">
+                                    Đăng ngày {post.post_created_at
+                                        ? new Date(post.post_created_at).toLocaleDateString("vi-VN")
+                                        : "—"}
                                 </p>
                             </div>
                         </div>
 
-                        {/* Card tiện ích nhỏ */}
-                        <div className="bg-blue-50 rounded-[2.5rem] p-8 border border-blue-100">
-                            <h5 className="font-black text-blue-900 mb-4 uppercase text-xs tracking-widest text-center">Tiện ích đi kèm</h5>
-                            <div className="flex flex-wrap justify-center gap-2">
-                                {['Máy lạnh', 'Wifi', 'Giờ tự do', 'An ninh'].map(item => (
-                                    <span key={item} className="bg-white px-3 py-1.5 rounded-xl text-xs font-bold text-blue-700 shadow-sm">
-                                        ✓ {item}
+                        {/* Info Card */}
+                        <div className="bg-white rounded-[2.5rem] p-6 border border-gray-100 shadow-sm">
+                            <h5 className="font-black text-gray-800 mb-4 text-sm uppercase tracking-widest">Thông tin chi tiết</h5>
+                            <div className="space-y-3">
+                                <div className="flex justify-between items-center py-2 border-b border-gray-50">
+                                    <span className="text-gray-500 text-sm">Diện tích</span>
+                                    <span className="font-bold text-sm">{room?.room_area || '—'} m²</span>
+                                </div>
+                                <div className="flex justify-between items-center py-2 border-b border-gray-50">
+                                    <span className="text-gray-500 text-sm">Loại phòng</span>
+                                    <span className="font-bold text-sm">{room?.room_types?.room_type_name || '—'}</span>
+                                </div>
+                                <div className="flex justify-between items-center py-2 border-b border-gray-50">
+                                    <span className="text-gray-500 text-sm">Trạng thái</span>
+                                    <span className={`font-bold text-sm ${room?.room_status !== false ? 'text-green-600' : 'text-red-500'}`}>
+                                        {room?.room_status !== false ? 'Còn phòng' : 'Hết phòng'}
                                     </span>
-                                ))}
+                                </div>
+                                {avgRating && (
+                                    <div className="flex justify-between items-center py-2">
+                                        <span className="text-gray-500 text-sm">Đánh giá</span>
+                                        <span className="font-bold text-sm text-yellow-600">⭐ {avgRating}/5</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -246,16 +267,6 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ pos
                         )}
                     </div>
                 </aside>
-            </div>
-            {/* PHẦN DƯỚI: COMMENT & ĐÁNH GIÁ   */}
-            <div className='bg-gray-100 p-8'>
-                <div>
-                    {/* input comment */}
-                    <CommentInput />
-
-                    {/* stars use component */}
-                    <Rating />
-                </div>
             </div>
         </div>
     );

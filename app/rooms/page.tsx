@@ -15,15 +15,6 @@ import {
 } from "@/components/common";
 import type { SearchFilters } from "@/components/common";
 
-const MapView = dynamic(() => import("@/components/map/MapView"), {
-    ssr: false,
-    loading: () => (
-        <div className="h-full bg-gray-100 flex items-center justify-center text-gray-400">
-            Đang khởi tạo bản đồ...
-        </div>
-    ),
-});
-
 interface PostWithDetails {
     post_id: string;
     post_title: string;
@@ -34,13 +25,11 @@ interface PostWithDetails {
         room_area: number | null;
         room_status: boolean | null;
         vr_url: string | null;
-
         latitude: number | string | null;
         longitude: number | string | null;
         room_types: { room_type_id: string; room_type_name: string } | null;
         roomimages: { image_url: string; is_360: boolean | null }[];
         locations: { location_id: string; city: string; district: string; ward: string } | null;
-
     } | null;
 }
 
@@ -84,8 +73,6 @@ function RoomsContent() {
                             room_id,
                             room_price,
                             room_area,
-                            latitude,
-                            longitude,
                             room_status,
                             vr_url,
                             latitude,
@@ -117,50 +104,26 @@ function RoomsContent() {
     };
 
     const handleSearch = (filters: SearchFilters) => {
-        setCurrentFilters(filters); // Lưu lại filters để truyền cho Map
         let result = [...posts];
 
-        // ✅ Keyword chỉ dùng để lọc list khi Map ĐÓNG
-        // Khi Map MỞ: keyword được truyền vào MapView để geocode, KHÔNG lọc list theo text
+        // Keyword search
         if (filters.keyword?.trim()) {
             const q = filters.keyword.toLowerCase();
             result = result.filter(
                 (p) =>
                     p.post_title.toLowerCase().includes(q) ||
                     p.rooms?.locations?.district?.toLowerCase().includes(q) ||
-                    p.rooms?.locations?.ward?.toLowerCase().includes(q)
-            );
-        }
-
-        // Lọc theo district/ward từ LocationSelect (không phụ thuộc map)
-        if (filters.district) {
-            result = result.filter(
-                (p) => p.rooms?.locations?.district === filters.district
-            );
-            if (filters.ward) {
-                result = result.filter(
-                    (p) => p.rooms?.locations?.ward === filters.ward
-                );
-            }
-            // Tự mở map khi chọn khu vực
-            setIsMapOpen(true);
-        }
-
-        // Cho phép lọc theo tiêu đề/mô tả bất kể Map đóng hay mở
-        if (filters.keyword?.trim()) {
-            const q = filters.keyword.toLowerCase();
-            result = result.filter(
-                (p) =>
-                    p.post_title.toLowerCase().includes(q) ||
-                    // Nếu bạn có cột description, hãy thêm vào đây
-                    p.rooms?.locations?.district?.toLowerCase().includes(q) ||
+                    p.rooms?.locations?.ward?.toLowerCase().includes(q) ||
                     p.rooms?.locations?.city?.toLowerCase().includes(q)
             );
         }
 
-        // Lọc theo loại phòng (Room Type)
-        if (filters.roomType) {
-            result = result.filter((p) => p.rooms?.room_types?.room_type_id === filters.roomType);
+        // Location filter
+        if (filters.district) {
+            result = result.filter((p) => p.rooms?.locations?.district === filters.district);
+        }
+        if (filters.ward) {
+            result = result.filter((p) => p.rooms?.locations?.ward === filters.ward);
         }
 
         // Room type filter
@@ -191,14 +154,12 @@ function RoomsContent() {
                 new Date(a.post_created_at || 0).getTime()
         );
 
-        // Sau khi lọc xong, cập nhật state filtered
         setFiltered(result);
         setCurrentPage(1);
     };
 
     const handleReset = () => {
         setFiltered(posts);
-        setCurrentFilters(null);
         setCurrentPage(1);
     };
 
@@ -208,10 +169,10 @@ function RoomsContent() {
                 <div className="max-w-7xl mx-auto">
                     <div className="flex items-center justify-between mb-4">
                         <div>
-                            <h1 className="text-xl lg:text-2xl font-black text-gray-900">
-                                🏠 Tìm phòng trọ
+                            <h1 className="text-3xl font-black text-gray-900">
+                                🏠 Danh sách phòng trọ
                             </h1>
-                            <p className="text-gray-500 text-xs mt-1">
+                            <p className="text-gray-500 text-sm mt-1">
                                 {loading
                                     ? "Đang tải..."
                                     : `Tìm thấy ${filtered.length} bài đăng`}
@@ -219,17 +180,15 @@ function RoomsContent() {
                         </div>
                         <Link
                             href="/"
-                            className="hidden sm:block text-sm text-gray-500 font-bold hover:text-blue-600"
+                            className="text-sm text-gray-500 hover:text-blue-600 font-medium"
                         >
-                            Trang chủ
+                            ← Trang chủ
                         </Link>
                     </div>
 
                     <SearchFilter
                         onSearch={handleSearch}
                         onReset={handleReset}
-                        onMapClick={() => setIsMapOpen(!isMapOpen)}
-                        isMapOpen={isMapOpen}
                         amenities={amenities}
                     />
                 </div>
@@ -289,46 +248,8 @@ function RoomsContent() {
                                 canPreviousPage={currentPage > 1}
                                 canNextPage={currentPage < totalPages}
                             />
-                        ) : (
-                            <>
-                                <div className="mb-4">
-                                    <Badge variant="info">📊 {filtered.length} kết quả</Badge>
-                                </div>
-                                <div
-                                    className={`grid gap-4 md:gap-6 ${isMapOpen
-                                        ? "grid-cols-1 xl:grid-cols-2"
-                                        : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-                                        }`}
-                                >
-                                    {paginatedPosts.map((post) => (
-                                        <Link key={post.post_id} href={`/rooms/${post.post_id}`}>
-                                            <PostCard post={post as any} />
-                                        </Link>
-                                    ))}
-                                </div>
-                                <div className="mt-8 pb-24 lg:pb-8">
-                                    <Pagination
-                                        currentPage={currentPage}
-                                        totalPages={totalPages}
-                                        onPageChange={setCurrentPage}
-                                    />
-                                </div>
-                            </>
                         )}
-                    </div>
-                </div>
-
-                {/* Cột phải: Map
-                    ✅ Truyền toàn bộ `posts` (chưa lọc) vào Map
-                    Map tự lọc theo 20km radius từ geocode keyword
-                    List (filtered) và Map hoạt động độc lập, không xung đột
-                */}
-                {isMapOpen && (
-                    <div className="fixed inset-0 pt-[180px] lg:pt-0 lg:relative lg:flex-1 h-full z-20 animate-in slide-in-from-right duration-500">
-                        <div className="w-full h-full relative border-l border-gray-200 shadow-2xl">
-                            <MapView posts={filtered} filters={currentFilters} />
-                        </div>
-                    </div>
+                    </>
                 )}
             </div>
         </>
