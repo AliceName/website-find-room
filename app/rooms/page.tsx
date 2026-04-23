@@ -5,7 +5,6 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import PostCard from "@/components/rooms/PostCard";
-import MapView from "@/components/map/MapView";
 import {
     SearchFilter,
     Pagination,
@@ -14,6 +13,17 @@ import {
     Badge,
 } from "@/components/common";
 import type { SearchFilters } from "@/components/common";
+
+import dynamic from "next/dynamic";
+
+const MapView = dynamic(() => import("@/components/map/MapView"), {
+    ssr: false,
+    loading: () => (
+        <div className="h-full bg-gray-100 flex items-center justify-center text-gray-400 rounded-3xl">
+            Đang khởi tạo bản đồ...
+        </div>
+    ),
+});
 
 interface PostWithDetails {
     post_id: string;
