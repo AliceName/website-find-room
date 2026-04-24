@@ -72,51 +72,39 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,#dbeafe_0%,#f8fafc_45%,#f8fafc_100%)] p-4 flex items-center justify-center text-slate-900">
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
             <div className="w-full max-w-md">
-                <div className="mb-8 text-center">
+                <div className="text-center mb-8">
                     <Link href="/" className="inline-block">
-                        <span className="text-4xl font-black tracking-tight text-blue-600">FindRoom</span>
+                        <span className="text-4xl font-black text-blue-600 tracking-tight">FindRoom</span>
                     </Link>
-                    <p className="mt-2 text-sm font-medium text-slate-500">
-                        {forgotMode ? "Đặt lại mật khẩu" : "Truy cập nhanh, tìm phòng rõ ràng hơn"}
+                    <p className="text-gray-500 text-sm mt-2 font-medium">
+                        {forgotMode ? "Đặt lại mật khẩu" : "Tìm phòng trọ ưng ý, nhanh chóng & minh bạch"}
                     </p>
                 </div>
 
-                <div className="overflow-hidden rounded-[2.5rem] border border-app bg-surface shadow-xl">
+                <div className="bg-white rounded-[2.5rem] shadow-xl border border-gray-100 overflow-hidden">
                     <div className="p-8 md:p-10">
-                        <div className={`grid transition-[grid-template-rows] duration-[220ms] ease-[var(--ease-out-quart)] ${error ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
-                            <div className="min-h-0 overflow-hidden">
-                                {error && (
-                                    <div className="mb-6 rounded-2xl border border-red-100 bg-red-50">
-                                        <div className="flex items-start gap-3 p-4">
-                                            <span className="mt-0.5 text-lg text-red-500">⚠️</span>
-                                            <p className="text-sm font-medium text-red-600">{error}</p>
-                                        </div>
-                                    </div>
-                                )}
+                        {error && (
+                            <div className="mb-6 bg-red-50 border border-red-100 rounded-2xl p-4 flex items-start gap-3">
+                                <span className="text-red-500 text-lg mt-0.5">⚠️</span>
+                                <p className="text-red-600 text-sm font-medium">{error}</p>
                             </div>
-                        </div>
-                        <div className={`grid transition-[grid-template-rows,opacity,transform] duration-[260ms] ease-[var(--ease-out-quart)] ${success ? "grid-rows-[1fr] opacity-100 translate-y-0 mb-6" : "grid-rows-[0fr] opacity-0 -translate-y-2 mb-0"}`}>
-                            <div className="min-h-0 overflow-hidden">
-                                {success && (
-                                    <div className="rounded-2xl border border-emerald-100 bg-emerald-50">
-                                        <div className="flex items-start gap-3 p-4">
-                                            <span className="mt-0.5 text-lg text-emerald-600">✅</span>
-                                            <p className="text-sm font-medium text-emerald-700">{success}</p>
-                                        </div>
-                                    </div>
-                                )}
+                        )}
+                        {success && (
+                            <div className="mb-6 bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex items-start gap-3">
+                                <span className="text-emerald-600 text-lg mt-0.5">✅</span>
+                                <p className="text-emerald-700 text-sm font-medium">{success}</p>
                             </div>
-                        </div>
+                        )}
 
                         {forgotMode ? (
                             <form onSubmit={handleForgotPassword} className="space-y-5">
-                                <p className="mb-4 text-sm text-slate-600">
+                                <p className="text-gray-600 text-sm mb-4">
                                     Nhập email đã đăng ký. Chúng tôi sẽ gửi link đặt lại mật khẩu cho bạn.
                                 </p>
                                 <div>
-                                    <label className="mb-2 block text-xs font-black uppercase tracking-widest text-slate-500">
+                                    <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">
                                         Email
                                     </label>
                                     <input
@@ -125,25 +113,20 @@ export default function LoginPage() {
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         placeholder="example@email.com"
-                                        className="w-full rounded-2xl border border-app bg-surface px-4 py-3.5 text-sm font-medium text-slate-900 placeholder:text-slate-400 transition-all duration-[180ms] ease-[var(--ease-out-quart)] focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/15 focus:shadow-[0_0_0_1px_rgba(37,99,235,0.18),0_0_0_6px_rgba(37,99,235,0.10)]"
+                                        className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3.5 text-sm font-medium text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                                     />
                                 </div>
                                 <button
                                     type="submit"
                                     disabled={forgotLoading}
-                                    className="w-full rounded-2xl bg-blue-600 py-4 font-black text-base text-white shadow-lg shadow-blue-200 transition-colors hover:bg-blue-700 disabled:bg-blue-400"
+                                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-4 rounded-2xl font-black text-base transition-all shadow-lg shadow-blue-200"
                                 >
-                                    <span className="inline-flex items-center justify-center gap-2">
-                                        {forgotLoading && (
-                                            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                                        )}
-                                        <span>{forgotLoading ? "Đang gửi..." : "GỬI EMAIL ĐẶT LẠI"}</span>
-                                    </span>
+                                    {forgotLoading ? "Đang gửi..." : "GỬI EMAIL ĐẶT LẠI"}
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setForgotMode(false)}
-                                    className="w-full text-sm font-medium text-slate-500 transition-colors hover:text-slate-700"
+                                    className="w-full text-gray-500 text-sm font-medium hover:text-gray-700 transition-colors"
                                 >
                                     ← Quay lại đăng nhập
                                 </button>
@@ -151,7 +134,7 @@ export default function LoginPage() {
                         ) : (
                             <form onSubmit={handleLogin} className="space-y-5">
                                 <div>
-                                    <label className="mb-2 block text-xs font-black uppercase tracking-widest text-slate-500">
+                                    <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">
                                         Email
                                     </label>
                                     <input
@@ -160,12 +143,12 @@ export default function LoginPage() {
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         placeholder="example@email.com"
-                                        className="w-full rounded-2xl border border-app bg-surface px-4 py-3.5 text-sm font-medium text-slate-900 placeholder:text-slate-400 transition-all duration-[180ms] ease-[var(--ease-out-quart)] focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/15 focus:shadow-[0_0_0_1px_rgba(37,99,235,0.18),0_0_0_6px_rgba(37,99,235,0.10)]"
+                                        className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3.5 text-sm font-medium text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="mb-2 block text-xs font-black uppercase tracking-widest text-slate-500">
+                                    <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">
                                         Mật khẩu
                                     </label>
                                     <div className="relative">
@@ -175,27 +158,27 @@ export default function LoginPage() {
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
                                             placeholder="••••••••"
-                                            className="w-full rounded-2xl border border-app bg-surface px-4 py-3.5 pr-12 text-sm font-medium text-slate-900 placeholder:text-slate-400 transition-all duration-[180ms] ease-[var(--ease-out-quart)] focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/15 focus:shadow-[0_0_0_1px_rgba(37,99,235,0.18),0_0_0_6px_rgba(37,99,235,0.10)]"
+                                            className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3.5 pr-12 text-sm font-medium text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                                         />
                                         <button
                                             type="button"
                                             onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute right-4 top-1/2 -translate-y-1/2 text-lg text-slate-400 transition-colors hover:text-slate-600"
+                                            className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-lg"
                                         >
                                             {showPassword ? "🙈" : "👁️"}
                                         </button>
                                     </div>
                                 </div>
 
-                                <div className="flex items-center justify-between text-xs text-slate-500">
+                                <div className="flex justify-between items-center text-xs text-gray-500">
                                     <button
                                         type="button"
                                         onClick={() => setForgotMode(true)}
-                                        className="font-bold text-blue-600 transition-colors hover:text-blue-700"
+                                        className="font-bold text-blue-600 hover:underline"
                                     >
                                         Quên mật khẩu?
                                     </button>
-                                    <Link href="/auth/register" className="font-bold text-blue-600 transition-colors hover:text-blue-700">
+                                    <Link href="/auth/register" className="font-bold text-blue-600 hover:underline">
                                         Đăng ký ngay
                                     </Link>
                                 </div>
@@ -203,22 +186,17 @@ export default function LoginPage() {
                                 <button
                                     type="submit"
                                     disabled={loading}
-                                    className="w-full rounded-2xl bg-blue-600 py-4 font-black text-base text-white shadow-lg shadow-blue-200 transition-colors hover:bg-blue-700 disabled:bg-blue-400"
+                                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-4 rounded-2xl font-black text-base transition-all shadow-lg shadow-blue-200 active:scale-95"
                                 >
-                                    <span className="inline-flex items-center justify-center gap-2">
-                                        {loading && (
-                                            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                                        )}
-                                        <span>{loading ? "Đang đăng nhập..." : "ĐĂNG NHẬP"}</span>
-                                    </span>
+                                    {loading ? "Đang đăng nhập..." : "ĐĂNG NHẬP"}
                                 </button>
                             </form>
                         )}
                     </div>
                 </div>
 
-                <div className="mt-6 text-center">
-                    <Link href="/" className="text-sm font-medium text-slate-500 transition-colors hover:text-blue-600">
+                <div className="text-center mt-6">
+                    <Link href="/" className="text-sm text-gray-500 hover:text-blue-600 font-medium transition-colors">
                         ← Về trang chủ
                     </Link>
                 </div>

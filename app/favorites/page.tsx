@@ -69,7 +69,7 @@ export default function FavoritesPage() {
         if (data) setFavorites(data as unknown as FavoritePost[]);
         setLoading(false);
     };
-
+    
     useEffect(() => {
         if (!user) return;
         // eslint-disable-next-line react-hooks/set-state-in-effect
