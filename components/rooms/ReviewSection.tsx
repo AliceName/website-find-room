@@ -140,7 +140,7 @@ export default function ReviewSection({ roomId }: ReviewSectionProps) {
                         key={star}
                         type="button"
                         onClick={interactive ? () => setRating(star) : undefined}
-                        className={`text-2xl transition-transform ${interactive ? 'cursor-pointer hover:scale-125' : 'cursor-default'} ${
+                        className={`text-2xl transition-all duration-[180ms] ease-[var(--ease-out-quart)] ${interactive ? 'cursor-pointer hover:scale-110 active:scale-95' : 'cursor-default'} ${
                             star <= val ? 'text-yellow-400' : 'text-gray-200'
                         }`}
                     >
@@ -158,13 +158,16 @@ export default function ReviewSection({ roomId }: ReviewSectionProps) {
     }, [success, error]);
 
     return (
-        <section className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-sm space-y-6">
+        <section className="space-y-6 rounded-[2.5rem] border border-app bg-surface p-8 shadow-sm">
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-black text-gray-900 flex items-center gap-3">
-                    <span className="w-2 h-8 bg-yellow-400 rounded-full" />
-                    Đánh giá ({reviews.length})
-                </h2>
+            <div className="flex items-center justify-between gap-4">
+                <div className="space-y-1">
+                    <h2 className="flex items-center gap-3 text-2xl font-black text-slate-950">
+                        <span className="h-8 w-2 rounded-full bg-yellow-400" />
+                        Đánh giá ({reviews.length})
+                    </h2>
+                    <p className="text-sm text-slate-500">Chia sẻ trải nghiệm thực tế của người thuê.</p>
+                </div>
                 {reviews.length > 0 && (
                     <div className="text-center">
                         <div className="text-3xl font-black text-yellow-500">{avgRating.toFixed(1)}</div>
@@ -179,31 +182,33 @@ export default function ReviewSection({ roomId }: ReviewSectionProps) {
             </div>
 
             {/* Alerts */}
-            {error && (
-                <div className="bg-red-50 border border-red-100 rounded-2xl p-3 text-red-600 text-sm font-medium">
-                    ⚠️ {error}
-                </div>
-            )}
-            {success && (
-                <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-3 text-emerald-700 text-sm font-medium">
-                    ✅ {success}
-                </div>
-            )}
+            <div className="grid grid-rows-[auto] transition-[grid-template-rows,opacity] duration-[220ms] ease-[var(--ease-out-quart)]">
+                {error && (
+                    <div className="overflow-hidden rounded-2xl border border-red-100 bg-red-50">
+                        <div className="p-3 text-sm font-medium text-red-600">⚠️ {error}</div>
+                    </div>
+                )}
+            </div>
+            <div className={`overflow-hidden rounded-2xl border border-emerald-100 bg-emerald-50 transition-all duration-[260ms] ease-[var(--ease-out-quart)] ${success ? 'opacity-100 translate-y-2' : 'max-h-0 opacity-0 -translate-y-2 border-0'}`}>
+                {success && (
+                    <div className="p-3 text-sm font-medium text-emerald-700">✅ {success}</div>
+                )}
+            </div>
 
             {/* Write Review Button */}
             {user && !showForm && (
                 <button
                     onClick={() => setShowForm(true)}
-                    className="w-full border-2 border-dashed border-yellow-300 bg-yellow-50 text-yellow-700 py-4 rounded-2xl font-bold text-sm hover:bg-yellow-100 transition-all"
+                    className="w-full rounded-2xl border-2 border-dashed border-yellow-300 bg-yellow-50 py-4 text-sm font-bold text-yellow-700 transition-all duration-[180ms] ease-[var(--ease-out-quart)] hover:bg-yellow-100 active:scale-[0.99]"
                 >
                     {userReview ? "✏️ Sửa đánh giá của bạn" : "✍️ Viết đánh giá"}
                 </button>
             )}
 
             {!user && (
-                <div className="text-center py-4 bg-gray-50 rounded-2xl">
-                    <p className="text-gray-500 text-sm mb-3">Đăng nhập để viết đánh giá</p>
-                    <a href="/auth/login" className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-blue-700 transition-all inline-block">
+                <div className="rounded-2xl bg-gray-50 py-4 text-center">
+                    <p className="mb-3 text-sm text-gray-500">Đăng nhập để viết đánh giá</p>
+                    <a href="/auth/login" className="inline-block rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-bold text-white transition-all duration-[180ms] ease-[var(--ease-out-quart)] hover:bg-blue-700">
                         Đăng nhập
                     </a>
                 </div>
@@ -211,43 +216,48 @@ export default function ReviewSection({ roomId }: ReviewSectionProps) {
 
             {/* Review Form */}
             {showForm && user && (
-                <div className="bg-yellow-50 border-2 border-yellow-200 rounded-3xl p-6 space-y-4">
-                    <h3 className="font-black text-gray-800">{userReview ? "Sửa đánh giá" : "Viết đánh giá"}</h3>
+                <div className="space-y-4 rounded-3xl border-2 border-yellow-200 bg-yellow-50 p-6">
+                    <h3 className="font-black text-slate-800">{userReview ? "Sửa đánh giá" : "Viết đánh giá"}</h3>
 
                     <div>
-                        <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Đánh giá</label>
+                        <label className="mb-2 block text-xs font-bold uppercase text-gray-500">Đánh giá</label>
                         {renderStars(rating, true)}
                     </div>
 
                     <div>
-                        <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Nhận xét</label>
+                        <label className="mb-2 block text-xs font-bold uppercase text-gray-500">Nhận xét</label>
                         <textarea
                             value={comment}
                             onChange={e => setComment(e.target.value)}
                             rows={3}
                             placeholder="Chia sẻ trải nghiệm của bạn về phòng này..."
-                            className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 resize-none"
+                            className="w-full resize-none rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm transition-all duration-[180ms] ease-[var(--ease-out-quart)] focus:outline-none focus:ring-4 focus:ring-yellow-400/20"
                         />
                     </div>
 
                     <div className="flex gap-3">
                         <button
                             onClick={() => setShowForm(false)}
-                            className="flex-1 border-2 border-gray-200 text-gray-600 py-3 rounded-xl font-bold text-sm hover:bg-gray-50 transition-all"
+                            className="flex-1 rounded-xl border-2 border-gray-200 py-3 text-sm font-bold text-gray-600 transition-all duration-[180ms] ease-[var(--ease-out-quart)] hover:bg-gray-50 active:scale-[0.99]"
                         >
                             Hủy
                         </button>
                         <button
                             onClick={handleSubmit}
                             disabled={submitting}
-                            className="flex-1 bg-yellow-400 hover:bg-yellow-500 text-gray-900 py-3 rounded-xl font-bold text-sm transition-all disabled:opacity-50"
+                            className="flex-1 rounded-xl bg-yellow-400 py-3 text-sm font-bold text-gray-900 transition-all duration-[180ms] ease-[var(--ease-out-quart)] hover:bg-yellow-500 disabled:opacity-50"
                         >
-                            {submitting ? "Đang gửi..." : (userReview ? "Cập nhật" : "Gửi đánh giá")}
+                            <span className="inline-flex items-center justify-center gap-2">
+                                {submitting && (
+                                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-gray-900/20 border-t-gray-900" />
+                                )}
+                                <span>{submitting ? "Đang gửi..." : (userReview ? "Cập nhật" : "Gửi đánh giá")}</span>
+                            </span>
                         </button>
                         {userReview && (
                             <button
                                 onClick={handleDelete}
-                                className="bg-red-100 hover:bg-red-200 text-red-600 px-4 py-3 rounded-xl font-bold text-sm transition-all"
+                                className="rounded-xl bg-red-100 px-4 py-3 text-sm font-bold text-red-600 transition-all duration-[180ms] ease-[var(--ease-out-quart)] hover:bg-red-200 active:scale-[0.98]"
                             >
                                 🗑️
                             </button>
@@ -260,19 +270,19 @@ export default function ReviewSection({ roomId }: ReviewSectionProps) {
             {loading ? (
                 <div className="space-y-4">
                     {[...Array(3)].map((_, i) => (
-                        <div key={i} className="animate-pulse">
+                        <div key={i} className="animate-pulse rounded-2xl bg-gray-50 p-4">
                             <div className="flex gap-3">
-                                <div className="w-10 h-10 bg-gray-200 rounded-full" />
+                                <div className="h-10 w-10 rounded-full bg-gray-200" />
                                 <div className="flex-1 space-y-2">
-                                    <div className="h-3 bg-gray-200 rounded w-1/4" />
-                                    <div className="h-3 bg-gray-200 rounded w-3/4" />
+                                    <div className="h-3 w-1/4 rounded bg-gray-200" />
+                                    <div className="h-3 w-3/4 rounded bg-gray-200" />
                                 </div>
                             </div>
                         </div>
                     ))}
                 </div>
             ) : reviews.length === 0 ? (
-                <div className="text-center py-8 text-gray-400">
+                <div className="rounded-2xl bg-gray-50 py-8 text-center text-gray-400">
                     <span className="text-4xl">💬</span>
                     <p className="mt-3 font-medium">Chưa có đánh giá nào</p>
                     <p className="text-sm">Hãy là người đầu tiên đánh giá phòng này!</p>
@@ -280,24 +290,24 @@ export default function ReviewSection({ roomId }: ReviewSectionProps) {
             ) : (
                 <div className="space-y-4">
                     {reviews.map(review => (
-                        <div key={review.review_id} className="flex gap-4 p-4 bg-gray-50 rounded-2xl">
-                            <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-black text-sm shrink-0">
+                        <div key={review.review_id} className="flex gap-4 rounded-2xl bg-gray-50 p-4 transition-all duration-[180ms] ease-[var(--ease-out-quart)] hover:-translate-y-0.5 hover:shadow-sm">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-blue-600 text-sm font-black text-white">
                                 {(review.users?.user_name || 'U').charAt(0).toUpperCase()}
                             </div>
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between gap-2 flex-wrap">
-                                    <span className="font-bold text-gray-800 text-sm">{review.users?.user_name || 'Ẩn danh'}</span>
+                            <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <span className="text-sm font-bold text-gray-800">{review.users?.user_name || 'Ẩn danh'}</span>
                                     <span className="text-xs text-gray-400">
                                         {review.review_created_at ? new Date(review.review_created_at).toLocaleDateString('vi-VN') : ''}
                                     </span>
                                 </div>
-                                <div className="flex gap-0.5 my-1">
+                                <div className="my-1 flex gap-0.5">
                                     {[1, 2, 3, 4, 5].map(s => (
                                         <span key={s} className={`text-sm ${s <= (review.rating || 0) ? 'text-yellow-400' : 'text-gray-200'}`}>★</span>
                                     ))}
                                 </div>
                                 {review.comment && (
-                                    <p className="text-gray-600 text-sm leading-relaxed">{review.comment}</p>
+                                    <p className="text-sm leading-relaxed text-gray-600">{review.comment}</p>
                                 )}
                             </div>
                         </div>

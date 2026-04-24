@@ -15,6 +15,27 @@ export function MapController({
     const map = useMap();
     const lastKeyword = useRef<string>("");
 
+    const safeFlyTo = (
+        lat: number,
+        lng: number,
+        zoom = 13,
+        options?: { animate?: boolean; duration?: number }
+    ) => {
+        const m = map as any;
+        if (!m || !m._mapPane || !m.getContainer) return;
+
+        const container = m.getContainer();
+        if (!container || !container.isConnected) return;
+
+        requestAnimationFrame(() => {
+            try {
+                m.flyTo([lat, lng], zoom, options);
+            } catch {
+                // ignore transient map lifecycle errors
+            }
+        });
+    };
+
     useEffect(() => {
         const keyword = filters?.keyword?.trim() || "";
 
@@ -25,9 +46,9 @@ export function MapController({
                 lastKeyword.current = "";
 
                 // Về lại bài đăng đầu tiên nếu có
-                const first = posts.find(p => p.rooms?.latitude && p.rooms?.longitude);
+                const first = posts.find((p) => p.rooms?.latitude && p.rooms?.longitude);
                 if (first) {
-                    map.flyTo([Number(first.rooms.latitude), Number(first.rooms.longitude)], 13);
+                    safeFlyTo(Number(first.rooms.latitude), Number(first.rooms.longitude));
                 }
             }
             return;
@@ -43,9 +64,9 @@ export function MapController({
             if (isDescription) {
                 setSearchLocation(null);
                 // Tìm bài đầu tiên khớp với mô tả để bay tới
-                const firstMatch = posts.find(p => p.rooms?.latitude && p.rooms?.longitude);
+                const firstMatch = posts.find((p) => p.rooms?.latitude && p.rooms?.longitude);
                 if (firstMatch) {
-                    map.flyTo([Number(firstMatch.rooms.latitude), Number(firstMatch.rooms.longitude)], 13);
+                    safeFlyTo(Number(firstMatch.rooms.latitude), Number(firstMatch.rooms.longitude));
                 }
                 lastKeyword.current = keyword;
                 return;
@@ -60,13 +81,15 @@ export function MapController({
 
             if (location) {
                 setSearchLocation(location);
-                map.flyTo([location.lat, location.lng], 13, { animate: true, duration: 1.5 });
+                safeFlyTo(location.lat, location.lng, 13, { animate: true, duration: 1.5 });
             } else {
                 setSearchLocation(null);
                 // Nếu không ra địa điểm, bay về bài đầu tiên có trong danh sách đã lọc
                 if (posts.length > 0) {
-                    const first = posts.find(p => p.rooms?.latitude && p.rooms?.longitude);
-                    if (first) map.flyTo([Number(first.rooms.latitude), Number(first.rooms.longitude)], 13);
+                    const first = posts.find((p) => p.rooms?.latitude && p.rooms?.longitude);
+                    if (first) {
+                        safeFlyTo(Number(first.rooms.latitude), Number(first.rooms.longitude));
+                    }
                 }
             }
             lastKeyword.current = keyword;

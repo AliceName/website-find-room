@@ -2,35 +2,35 @@ import Link from "next/link";
 
 export default function Footer() {
     return (
-        <div className="bg-gray-900 text-gray-300 pt-10 pb-6">
-            <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-8">
+        <footer className="border-t border-app bg-white text-slate-700">
+            <div className="mx-auto grid max-w-7xl gap-8 px-6 py-10 md:grid-cols-4">
                 <div>
-                    <h2 className="text-xl font-bold text-white mb-3">FindRoom</h2>
-                    <p className="text-sm">
+                    <h2 className="mb-3 text-xl font-black text-slate-950">FindRoom</h2>
+                    <p className="text-sm leading-6 text-slate-500">
                         Nền tảng tìm kiếm và đăng tin cho thuê phòng trọ, căn hộ uy tín.
                     </p>
                 </div>
 
                 <div>
-                    <h3 className="text-lg font-semibold text-white mb-3">Liên kết</h3>
+                    <h3 className="mb-3 text-lg font-semibold text-slate-950">Liên kết</h3>
                     <ul className="space-y-2 text-sm">
                         <li>
-                            <a href="#" className="hover:text-white">
+                            <Link href="/" className="transition-all duration-[180ms] ease-[var(--ease-out-quart)] hover:text-blue-600 hover:translate-x-0.5">
                                 Trang chủ
-                            </a>
+                            </Link>
                         </li>
                         <li>
-                            <a href="#" className="hover:text-white">
+                            <Link href="/rooms" className="transition-all duration-[180ms] ease-[var(--ease-out-quart)] hover:text-blue-600 hover:translate-x-0.5">
                                 Tìm phòng
-                            </a>
+                            </Link>
                         </li>
                         <li>
-                            <a href="#" className="hover:text-white">
+                            <Link href="/post" className="transition-all duration-[180ms] ease-[var(--ease-out-quart)] hover:text-blue-600 hover:translate-x-0.5">
                                 Đăng tin
-                            </a>
+                            </Link>
                         </li>
                         <li>
-                            <a href="#" className="hover:text-white">
+                            <a href="mailto:contact@findroom.vn" className="transition-all duration-[180ms] ease-[var(--ease-out-quart)] hover:text-blue-600 hover:translate-x-0.5">
                                 Liên hệ
                             </a>
                         </li>
@@ -38,32 +38,32 @@ export default function Footer() {
                 </div>
 
                 <div>
-                    <h3 className="text-lg font-semibold text-white mb-3">Liên hệ</h3>
-                    <p className="text-sm">📍 TP.HCM</p>
-                    <p className="text-sm">📞 0123 456 789</p>
-                    <p className="text-sm">✉️ contact@findroom.vn</p>
+                    <h3 className="mb-3 text-lg font-semibold text-slate-950">Liên hệ</h3>
+                    <p className="text-sm text-slate-500">📍 TP.HCM</p>
+                    <p className="text-sm text-slate-500">📞 0123 456 789</p>
+                    <p className="text-sm text-slate-500">✉️ contact@findroom.vn</p>
                 </div>
 
                 <div>
-                    <h3 className="text-lg font-semibold text-white mb-3">
+                    <h3 className="mb-3 text-lg font-semibold text-slate-950">
                         Nhận tin mới
                     </h3>
-                    <form className="flex flex-col space-y-2">
+                    <form className="space-y-2">
                         <input
                             type="email"
                             placeholder="Nhập email..."
-                            className="px-3 py-2 rounded bg-gray-800 text-sm focus:outline-none"
+                            className="w-full rounded-2xl border border-app bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 transition-all duration-[180ms] ease-[var(--ease-out-quart)] focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-400 focus:bg-white"
                         />
-                        <button className="bg-blue-500 hover:bg-blue-600 text-white py-2 rounded">
+                        <button className="w-full rounded-2xl bg-blue-600 py-2 text-sm font-bold text-white transition-all duration-[180ms] ease-[var(--ease-out-quart)] hover:bg-blue-700 hover:scale-[1.01] active:scale-[0.98]">
                             Đăng ký
                         </button>
                     </form>
                 </div>
             </div>
 
-            <div className="border-t border-gray-700 mt-8 pt-4 text-center text-sm">
+            <div className="border-t border-app py-4 text-center text-sm text-slate-500">
                 © 2026 FindRoom. All rights reserved.
             </div>
-        </div>
+        </footer>
     );
 }

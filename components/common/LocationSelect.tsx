@@ -10,6 +10,7 @@ interface LocationSelectProps {
   ward?: string;
   onLocationChange?: (city: string, district: string, ward: string) => void;
   showWard?: boolean;
+  cityOptions?: Array<{ value: string; label: string }>;
 }
 
 export default function LocationSelect({
@@ -17,10 +18,11 @@ export default function LocationSelect({
   district = "",
   ward = "",
   onLocationChange,
-  showWard = true,
+  showWard = false,
+  cityOptions = [],
 }: LocationSelectProps) {
   const [cities, setCities] = useState<string[]>([]);
-  const [districts, setDistricts] = useState<string[]>([]);
+  const [districts, setDistricts] = useState<Array<{ value: string; label: string }>>([]);
   const [wards, setWards] = useState<string[]>([]);
   const [localCity, setLocalCity] = useState(city);
   const [localDistrict, setLocalDistrict] = useState(district);
@@ -64,9 +66,14 @@ export default function LocationSelect({
           .order("district");
 
         const uniqueDistricts = Array.from(
-          new Set(data?.map((d) => d.district) || [])
-        );
-        setDistricts(uniqueDistricts as string[]);
+          new Map(
+            (data?.map((d) => d.district) || []).map((districtName) => [districtName, districtName])
+          ).entries()
+        ).map(([value]) => ({
+          value,
+          label: `${value} (${(data?.filter((d) => d.district === value).length || 0)})`,
+        }));
+        setDistricts(uniqueDistricts as Array<{ value: string; label: string }>);
         setLocalDistrict("");
         setLocalWard("");
         setWards([]);
@@ -136,11 +143,17 @@ export default function LocationSelect({
           className="w-full px-4 py-2.5 text-sm font-medium text-gray-800 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
         >
           <option value="">-- Chọn thành phố --</option>
-          {cities.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
+          {cityOptions.length > 0
+            ? cityOptions.map((cityOption) => (
+                <option key={cityOption.value} value={cityOption.value}>
+                  {cityOption.label}
+                </option>
+              ))
+            : cities.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
         </select>
       </div>
 
@@ -157,8 +170,8 @@ export default function LocationSelect({
         >
           <option value="">-- Chọn quận/huyện --</option>
           {districts.map((d) => (
-            <option key={d} value={d}>
-              {d}
+            <option key={d.value} value={d.value}>
+              {d.label}
             </option>
           ))}
         </select>

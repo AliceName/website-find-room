@@ -77,6 +77,8 @@ CREATE TABLE public.rooms (
   room_type_id text,
   room_created_at timestamp with time zone DEFAULT now(),
   vr_url text,
+  address_detail text,
+  full_address text,
   CONSTRAINT rooms_pkey PRIMARY KEY (room_id),
   CONSTRAINT rooms_location_id_fkey FOREIGN KEY (location_id) REFERENCES public.locations(location_id),
   CONSTRAINT rooms_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(user_id),

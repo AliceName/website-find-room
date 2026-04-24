@@ -50,24 +50,28 @@ export default function RoomVirtualSection({ normalImages, vrImages, externalVrU
 
   return (
     <section className="space-y-4">
-      {activeItem.kind === "normal" ? (
-        <div className="relative aspect-[16/10] rounded-[2rem] overflow-hidden border-4 border-white shadow-md group bg-gray-100">
-          <Image
-            src={activeItem.url}
-            alt="Ảnh chính của phòng"
-            fill
-            sizes="(max-width: 1024px) 100vw, 65vw"
-            loading="eager"
-            className="object-cover group-hover:scale-105 transition-transform duration-500"
-          />
-        </div>
-      ) : (
-        <VirtualTourViewer url={activeItem.url} />
-      )}
+      <div className="overflow-hidden rounded-[2rem] border border-app bg-slate-50 shadow-sm transition-all duration-[220ms] ease-[var(--ease-out-quart)]">
+        {activeItem.kind === "normal" ? (
+          <div className="group relative aspect-[16/10] bg-gray-100">
+            <Image
+              src={activeItem.url}
+              alt="Ảnh chính của phòng"
+              fill
+              sizes="(max-width: 1024px) 100vw, 65vw"
+              loading="eager"
+              className="object-cover transition-transform duration-[420ms] ease-[var(--ease-out-quart)] group-hover:scale-[1.03]"
+            />
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-[2rem] bg-white transition-opacity duration-[220ms] ease-[var(--ease-out-quart)]">
+            <VirtualTourViewer url={activeItem.url} />
+          </div>
+        )}
+      </div>
 
       {mediaItems.length > 1 && (
         <div className="space-y-2">
-          <p className="text-xs font-black text-gray-500 uppercase tracking-widest">
+          <p className="text-xs font-black uppercase tracking-widest text-slate-500">
             Chọn ảnh hiển thị
           </p>
           <div className="flex items-center gap-2">
@@ -75,14 +79,14 @@ export default function RoomVirtualSection({ normalImages, vrImages, externalVrU
               type="button"
               onClick={() => setThumbStartIndex((prev) => Math.max(0, prev - 1))}
               disabled={safeThumbStartIndex === 0}
-              className="h-10 w-10 rounded-full border border-gray-200 bg-white text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 transition-all duration-[180ms] ease-[var(--ease-out-quart)] hover:scale-[1.02] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
               aria-label="Ảnh 360 trước"
             >
               ←
             </button>
 
-            <div className="flex gap-3 overflow-hidden flex-1">
-              {currentThumbs.map((url, index) => {
+            <div className="flex flex-1 gap-3 overflow-hidden">
+              {currentThumbs.map((_, index) => {
                 const realIndex = safeThumbStartIndex + index;
                 const selected = realIndex === safeActiveIndex;
                 const item = mediaItems[realIndex];
@@ -91,14 +95,15 @@ export default function RoomVirtualSection({ normalImages, vrImages, externalVrU
                     key={`${item.url}-${realIndex}`}
                     type="button"
                     onClick={() => setActiveIndex(realIndex)}
-                    className={`relative w-28 h-20 rounded-2xl overflow-hidden border-2 shrink-0 transition-all ${selected
+
+                    className={`relative h-20 w-28 shrink-0 overflow-hidden rounded-2xl border-2 transition-all duration-[180ms] ease-[var(--ease-out-quart)] hover:-translate-y-0.5 hover:shadow-sm ${selected
                         ? "border-blue-500 ring-2 ring-blue-200"
                         : "border-white hover:border-blue-300"
                       }`}
                     title={`Xem media #${realIndex + 1}`}
                   >
                     {item.kind === "external" ? (
-                      <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white">
+                      <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
                         <span className="text-2xl">🗺️</span>
                       </div>
                     ) : (
@@ -108,15 +113,16 @@ export default function RoomVirtualSection({ normalImages, vrImages, externalVrU
                         fill
                         sizes="112px"
                         loading="lazy"
-                        className="object-cover"
+                        className="object-cover transition-transform duration-[420ms] ease-[var(--ease-out-quart)] group-hover:scale-[1.03]"
                       />
                     )}
                     {selected && (
-                      <span className="absolute top-1 left-1 text-[10px] px-1.5 py-0.5 rounded-lg bg-blue-600 text-white font-black">
+                      <span className="absolute left-1 top-1 rounded-lg bg-blue-600 px-1.5 py-0.5 text-[10px] font-black text-white">
                         Đang xem
                       </span>
                     )}
-                    <span className={`absolute bottom-1 left-1 text-[9px] px-1.5 py-0.5 rounded-lg font-black text-white ${item.kind === "normal"
+
+                    <span className={`absolute bottom-1 left-1 rounded-lg px-1.5 py-0.5 text-[9px] font-black text-white ${item.kind === "normal"
                         ? "bg-gray-700/90"
                         : item.kind === "panorama"
                           ? "bg-purple-600/90"
@@ -133,7 +139,7 @@ export default function RoomVirtualSection({ normalImages, vrImages, externalVrU
               type="button"
               onClick={() => setThumbStartIndex((prev) => Math.min(maxThumbStart, prev + 1))}
               disabled={safeThumbStartIndex >= maxThumbStart}
-              className="h-10 w-10 rounded-full border border-gray-200 bg-white text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 transition-all duration-[180ms] ease-[var(--ease-out-quart)] hover:scale-[1.02] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
               aria-label="Ảnh 360 tiếp theo"
             >
               →

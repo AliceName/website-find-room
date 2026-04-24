@@ -27,7 +27,7 @@ const STEPS = [
 ];
 
 const inputCls =
-    "w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3.5 text-sm font-medium text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all";
+    "w-full rounded-2xl border border-app bg-surface px-4 py-3.5 text-sm font-medium text-slate-900 placeholder:text-slate-400 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2";
 
 const DEFAULT_AMENITIES = [
     { label: "Wifi", icon: "📶" },
@@ -110,7 +110,6 @@ export default function PostPage() {
     const [userRole, setUserRole] = useState<string | null>(null);
     const [latitude, setLatitude] = useState<number | null>(null);
     const [longitude, setLongitude] = useState<number | null>(null);
-    const [addressDetailHint, setAddressDetailHint] = useState<string>("");
 
     const [form, setForm] = useState<FormData>({
         post_title: "",
@@ -202,7 +201,6 @@ export default function PostPage() {
         if (data.ward) setForm(prev => ({ ...prev, ward: data.ward ?? prev.ward }));
         if (data.address_detail) {
             setForm(prev => ({ ...prev, address_detail: data.address_detail ?? prev.address_detail }));
-            setAddressDetailHint(data.address_detail);
         }
     };
 
@@ -331,14 +329,14 @@ export default function PostPage() {
 
     if (userRole === "renter") {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-                <div className="bg-white rounded-3xl p-12 text-center max-w-md shadow-xl border border-gray-100">
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 text-slate-900">
+                <div className="max-w-md rounded-3xl border border-app bg-surface p-12 text-center shadow-xl">
                     <span className="text-6xl">🔑</span>
-                    <h2 className="text-2xl font-black text-gray-900 mt-4 mb-2">Bạn là người thuê</h2>
-                    <p className="text-gray-500 mb-6">Chỉ chủ trọ mới có thể đăng tin. Hãy cập nhật vai trò trong hồ sơ.</p>
-                    <div className="flex gap-3 justify-center">
-                        <Link href="/profile" className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold hover:bg-blue-700 transition-all">Cập nhật hồ sơ</Link>
-                        <Link href="/" className="border-2 border-gray-200 text-gray-600 px-6 py-3 rounded-2xl font-bold hover:bg-gray-50 transition-all">Về trang chủ</Link>
+                    <h2 className="mt-4 mb-2 text-2xl font-black text-slate-950">Bạn đang ở vai trò người thuê</h2>
+                    <p className="mb-6 text-slate-500">Chỉ chủ trọ mới có thể đăng tin. Hãy cập nhật vai trò trong hồ sơ nếu đây là tài khoản của bạn.</p>
+                    <div className="flex justify-center gap-3">
+                        <Link href="/profile" className="rounded-2xl bg-blue-600 px-6 py-3 font-bold text-white transition-colors hover:bg-blue-700">Cập nhật hồ sơ</Link>
+                        <Link href="/" className="rounded-2xl border border-app px-6 py-3 font-bold text-slate-600 transition-colors hover:bg-slate-100">Về trang chủ</Link>
                     </div>
                 </div>
             </div>
@@ -349,12 +347,12 @@ export default function PostPage() {
     const images360 = form.images.filter((image) => image.is360);
 
     return (
-        <div className="min-h-screen bg-gray-50 py-10 px-4">
-            <div className="max-w-2xl mx-auto">
+        <div className="min-h-screen bg-slate-50 py-10 px-4 text-slate-900">
+            <div className="mx-auto max-w-2xl">
                 <div className="mb-8">
-                    <Link href="/" className="text-sm text-gray-400 hover:text-blue-600 font-medium">← Về trang chủ</Link>
-                    <h1 className="text-3xl md:text-4xl font-black text-gray-900 mt-3 tracking-tight">Đăng tin cho thuê</h1>
-                    <p className="text-gray-500 mt-1 font-medium">Điền đầy đủ để tiếp cận nhiều người thuê hơn.</p>
+                    <Link href="/" className="text-sm font-medium text-slate-400 transition hover:text-accent-app">← Về trang chủ</Link>
+                    <h1 className="mt-3 text-3xl font-black tracking-tight text-slate-950 md:text-4xl">Đăng tin cho thuê</h1>
+                    <p className="mt-1 font-medium text-slate-500">Điền đủ thông tin để người thuê nhìn thấy căn phòng rõ ràng hơn.</p>
                 </div>
 
                 <div className="flex items-center gap-2 mb-8">

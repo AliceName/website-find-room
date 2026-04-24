@@ -61,7 +61,17 @@ function MapAutoResize({
 
     useEffect(() => {
         const timer = setTimeout(() => {
-            map.invalidateSize();
+            const m = map as any;
+            if (!m || !m._mapPane || !m.getContainer) return;
+
+            const container = m.getContainer();
+            if (!container || !container.isConnected) return;
+
+            try {
+                m.invalidateSize();
+            } catch {
+                return;
+            }
 
             // Chỉ flyTo theo post khi KHÔNG có searchLocation
             if (!searchLocation && posts && posts.length > 0) {
@@ -70,9 +80,15 @@ function MapAutoResize({
                 );
                 if (firstPost) {
                     const { latitude, longitude } = firstPost.rooms;
-                    map.flyTo([Number(latitude), Number(longitude)], 11, {
-                        animate: true,
-                        duration: 1.5,
+                    requestAnimationFrame(() => {
+                        try {
+                            m.flyTo([Number(latitude), Number(longitude)], 11, {
+                                animate: true,
+                                duration: 1.2,
+                            });
+                        } catch {
+                            // ignore transient map lifecycle errors
+                        }
                     });
                 }
             }
