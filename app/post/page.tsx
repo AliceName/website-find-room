@@ -27,7 +27,7 @@ const STEPS = [
 ];
 
 const inputCls =
-    "w-full rounded-2xl border border-app bg-surface px-4 py-3.5 text-sm font-medium text-slate-900 placeholder:text-slate-400 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2";
+    "w-full rounded-2xl border border-amber-200/80 bg-white/90 px-4 py-3.5 text-sm font-medium text-slate-900 shadow-sm placeholder:text-slate-400 transition-all focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 focus:ring-offset-amber-50";
 
 const DEFAULT_AMENITIES = [
     { label: "Wifi", icon: "📶" },
@@ -82,6 +82,8 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
     );
 }
 
+type PostUserRole = "owner" | "renter" | null;
+
 interface FormData {
     post_title: string;
     room_type: string;
@@ -107,7 +109,7 @@ export default function PostPage() {
     const [previews, setPreviews] = useState<string[]>([]);
     const [upload360Mode, setUpload360Mode] = useState(false);
     const [amenities, setAmenities] = useState<AmenityOption[]>([]);
-    const [userRole, setUserRole] = useState<string | null>(null);
+    const [userRole, setUserRole] = useState<PostUserRole>(null);
     const [latitude, setLatitude] = useState<number | null>(null);
     const [longitude, setLongitude] = useState<number | null>(null);
 
@@ -128,10 +130,18 @@ export default function PostPage() {
 
     useEffect(() => {
         supabase.auth.getUser().then(({ data: { user } }) => {
-            if (!user) { router.push("/auth/login"); return; }
-            supabase.from("users").select("user_role").eq("user_id", user.id).single().then(({ data }) => {
-                setUserRole(data?.user_role ?? null);
-            });
+            if (!user) {
+                router.push("/auth/login");
+                return;
+            }
+            supabase
+                .from("users")
+                .select("user_role")
+                .eq("user_id", user.id)
+                .single()
+                .then(({ data }) => {
+                    setUserRole(data?.user_role ?? null);
+                });
         });
         loadAmenities();
     }, [router]);
@@ -218,13 +228,12 @@ export default function PostPage() {
         const mapped = files.map((file) => ({ file, is360: upload360Mode }));
         const newFiles = [...form.images, ...mapped].slice(0, 8);
         update("images", newFiles);
-        setPreviews(newFiles.map((item) => URL.createObjectURL(item.file)));
+        e.target.value = "";
     };
 
     const removeImage = (index: number) => {
         const newFiles = form.images.filter((_, i) => i !== index);
         update("images", newFiles);
-        setPreviews(newFiles.map((item) => URL.createObjectURL(item.file)));
     };
 
     const validateStep = (s: number): string | null => {
@@ -330,13 +339,13 @@ export default function PostPage() {
     if (userRole === "renter") {
         return (
             <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 text-slate-900">
-                <div className="max-w-md rounded-3xl border border-app bg-surface p-12 text-center shadow-xl">
+                <div className="max-w-md rounded-3xl border border-amber-200/80 bg-gradient-to-b from-white to-amber-50 p-12 text-center shadow-[0_25px_90px_rgba(120,53,15,0.12)]">
                     <span className="text-6xl">🔑</span>
                     <h2 className="mt-4 mb-2 text-2xl font-black text-slate-950">Bạn đang ở vai trò người thuê</h2>
-                    <p className="mb-6 text-slate-500">Chỉ chủ trọ mới có thể đăng tin. Hãy cập nhật vai trò trong hồ sơ nếu đây là tài khoản của bạn.</p>
+                    <p className="mb-6 text-slate-600">Chỉ chủ trọ mới có thể đăng tin. Hãy cập nhật vai trò trong hồ sơ nếu đây là tài khoản của bạn.</p>
                     <div className="flex justify-center gap-3">
-                        <Link href="/profile" className="rounded-2xl bg-blue-600 px-6 py-3 font-bold text-white transition-colors hover:bg-blue-700">Cập nhật hồ sơ</Link>
-                        <Link href="/" className="rounded-2xl border border-app px-6 py-3 font-bold text-slate-600 transition-colors hover:bg-slate-100">Về trang chủ</Link>
+                        <Link href="/profile" className="rounded-2xl bg-gradient-to-r from-amber-600 to-orange-600 px-6 py-3 font-bold text-white transition-all hover:-translate-y-0.5 hover:from-amber-700 hover:to-orange-700">Cập nhật hồ sơ</Link>
+                        <Link href="/" className="rounded-2xl border border-amber-200 bg-white px-6 py-3 font-bold text-amber-700 transition-all hover:-translate-y-0.5 hover:bg-amber-50">Về trang chủ</Link>
                     </div>
                 </div>
             </div>
@@ -350,41 +359,41 @@ export default function PostPage() {
         <div className="min-h-screen bg-slate-50 py-10 px-4 text-slate-900">
             <div className="mx-auto max-w-2xl">
                 <div className="mb-8">
-                    <Link href="/" className="text-sm font-medium text-slate-400 transition hover:text-accent-app">← Về trang chủ</Link>
+                    <Link href="/" className="text-sm font-medium text-amber-600 transition hover:text-amber-700">← Về trang chủ</Link>
                     <h1 className="mt-3 text-3xl font-black tracking-tight text-slate-950 md:text-4xl">Đăng tin cho thuê</h1>
-                    <p className="mt-1 font-medium text-slate-500">Điền đủ thông tin để người thuê nhìn thấy căn phòng rõ ràng hơn.</p>
+                    <p className="mt-1 font-medium text-slate-600">Điền đủ thông tin để người thuê nhìn thấy căn phòng rõ ràng hơn.</p>
                 </div>
 
-                <div className="flex items-center gap-2 mb-8">
+                <div className="mb-8 flex items-center gap-2">
                     {STEPS.map((s, i) => (
                         <div key={s.id} className="flex items-center gap-2 flex-1">
-                            <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-black transition-all ${step > s.id ? "bg-green-500 text-white" :
-                                step === s.id ? "bg-blue-600 text-white shadow-lg shadow-blue-200" :
-                                    "bg-gray-200 text-gray-400"
+                            <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-black transition-all ${step > s.id ? "bg-emerald-500 text-white" :
+                                step === s.id ? "bg-amber-600 text-white shadow-lg shadow-amber-200" :
+                                    "bg-amber-100 text-amber-400"
                                 }`}>
                                 {step > s.id ? "✓" : s.id}
                             </div>
-                            <span className={`text-xs font-bold hidden sm:block truncate ${step === s.id ? "text-blue-600" : "text-gray-400"}`}>
+                            <span className={`text-xs font-bold hidden sm:block truncate ${step === s.id ? "text-amber-700" : "text-slate-400"}`}>
                                 {s.label}
                             </span>
                             {i < STEPS.length - 1 && (
-                                <div className={`h-0.5 flex-1 mx-1 rounded-full ${step > s.id ? "bg-green-400" : "bg-gray-200"}`} />
+                                <div className={`h-0.5 flex-1 mx-1 rounded-full ${step > s.id ? "bg-emerald-400" : "bg-amber-100"}`} />
                             )}
                         </div>
                     ))}
                 </div>
 
                 {error && (
-                    <div className="mb-6 bg-red-50 border border-red-100 rounded-2xl p-4 flex items-start gap-3">
-                        <span className="text-red-500 text-lg shrink-0">⚠️</span>
-                        <p className="text-red-600 text-sm font-medium">{error}</p>
+                    <div className="mb-6 flex items-start gap-3 rounded-2xl border border-rose-100 bg-rose-50 p-4">
+                        <span className="shrink-0 text-lg text-rose-500">⚠️</span>
+                        <p className="text-sm font-medium text-rose-700">{error}</p>
                     </div>
                 )}
 
-                <div className="bg-white rounded-[2.5rem] shadow-xl border border-gray-100 p-8 md:p-10 space-y-8">
+                <div className="space-y-8 rounded-[2.5rem] border border-amber-100 bg-gradient-to-b from-white to-amber-50/40 p-8 shadow-[0_25px_90px_rgba(120,53,15,0.08)] md:p-10">
                     {step === 1 && (
                         <div className="space-y-6">
-                            <h2 className="text-xl font-black text-gray-900">📋 Thông tin cơ bản</h2>
+                            <h2 className="text-xl font-black text-slate-900">📋 Thông tin cơ bản</h2>
 
                             <Field label="Tiêu đề bài đăng *">
                                 <input type="text" value={form.post_title} maxLength={120}
@@ -417,7 +426,7 @@ export default function PostPage() {
                                         <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">đ</span>
                                     </div>
                                     {form.room_price && Number(form.room_price) > 0 && (
-                                        <p className="text-xs text-blue-600 font-bold mt-1">
+                                        <p className="mt-1 text-xs font-bold text-amber-700">
                                             ≈ {Number(form.room_price).toLocaleString("vi-VN")} đ
                                         </p>
                                     )}
