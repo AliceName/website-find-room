@@ -18,7 +18,7 @@ type PostDetail = Database['public']['Tables']['posts']['Row'] & {
             amenities: { amenity_name: string } | null;
         }[];
     }) | null;
-    users: { user_name: string; user_phone: string | null; user_email: string } | null;
+    users: { user_name: string; user_phone: string | null; user_email: string; user_avatar: string | null; user_id: string } | null;
 };
 
 export default async function RoomDetailPage({ params }: { params: Promise<{ post_id: string }> }) {
@@ -37,7 +37,7 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ pos
                     amenities:amenity_id ( amenity_name )
                 )
             ),
-            users:user_id ( user_name, user_phone, user_email )
+            users:user_id ( user_id, user_name, user_phone, user_email, user_avatar )
         `)
         .eq('post_id', post_id)
         .single();
@@ -80,7 +80,6 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ pos
             : room.room_price.toLocaleString('vi-VN') + ' đ'
         : '0';
 
-    // Get average rating
     const { data: reviewsData } = await supabase
         .from('reviews')
         .select('rating')
@@ -263,7 +262,6 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ pos
                 {/* RIGHT COLUMN - Sidebar */}
                 <aside className="lg:col-span-4">
                     <div className="sticky top-10 space-y-6 rounded-[3rem] bg-transparent">
-                        {/* Contact Card */}
                         <div className="rounded-[3rem] border border-blue-100 bg-gradient-to-br from-blue-500 to-cyan-500 p-8 text-white shadow-2xl transition-transform duration-[220ms] ease-[var(--ease-out-quart)] hover:-translate-y-0.5 hover:shadow-[0_24px_70px_rgba(59,130,246,0.24)]">
                             <div className="mb-8 flex items-center gap-4">
                                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 text-2xl shadow-lg backdrop-blur-sm">
@@ -281,6 +279,9 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ pos
                                     ownerEmail={post.users?.user_email}
                                     ownerName={post.users?.user_name}
                                     roomTitle={post.post_title}
+                                    ownerId={post.users?.user_id}
+                                    postId={post.post_id}
+                                    roomId={post.room_id || undefined}
                                 />
                             </div>
 
@@ -293,7 +294,6 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ pos
                             </div>
                         </div>
 
-                        {/* Info Card */}
                         <div className="rounded-[2.5rem] border border-app bg-surface p-6 shadow-sm transition-all duration-[180ms] ease-[var(--ease-out-quart)] hover:-translate-y-0.5 hover:shadow-md">
                             <h5 className="mb-4 text-sm font-black uppercase tracking-widest text-slate-800">Thông tin chi tiết</h5>
                             <div className="space-y-3">
@@ -320,7 +320,6 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ pos
                             </div>
                         </div>
 
-                        {/* Amenities mini card */}
                         {amenities.length > 0 && (
                             <div className="rounded-[2.5rem] border border-blue-100 bg-blue-50 p-6 transition-all duration-[180ms] ease-[var(--ease-out-quart)] hover:bg-blue-100/60">
                                 <h5 className="mb-4 text-center text-xs font-black uppercase tracking-widest text-blue-900">

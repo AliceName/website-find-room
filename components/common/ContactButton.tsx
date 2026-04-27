@@ -1,14 +1,21 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Button from "./Button";
 import Modal from "./Modal";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient";
+import { ChatService } from "@/lib/services/chat.service";
 
 interface ContactButtonProps {
   ownerPhone?: string | null;
   ownerName?: string;
   ownerEmail?: string | null;
   roomTitle?: string;
+  ownerId?: string | null;
+  postId?: string;
+  roomId?: string;
+  retentionPolicy?: "manual" | "3_days" | "7_days" | "30_days" | "forever";
 }
 
 export default function ContactButton({
@@ -16,8 +23,65 @@ export default function ContactButton({
   ownerName = "Chủ phòng",
   ownerEmail,
   roomTitle = "Phòng cho thuê",
+  ownerId,
+  postId,
+  roomId,
+  retentionPolicy = "manual",
 }: ContactButtonProps) {
   const [showModal, setShowModal] = useState(false);
+  const [loadingChat, setLoadingChat] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadCurrentUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      if (mounted) setCurrentUserId(data.user?.id ?? null);
+    };
+
+    void loadCurrentUser();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const isOwner = Boolean(currentUserId && ownerId && currentUserId === ownerId);
+
+  const handleChat = async () => {
+    try {
+      setLoadingChat(true);
+      const { data: authData } = await supabase.auth.getUser();
+      const currentUser = authData.user;
+
+      if (!currentUser) {
+        router.push(`/auth/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+        return;
+      }
+
+      if (!ownerId || currentUser.id === ownerId) {
+        setShowModal(true);
+        return;
+      }
+
+      const conversation = await ChatService.getOrCreateConversation({
+        renterId: currentUser.id,
+        ownerId,
+        postId: postId ?? null,
+        roomId: roomId ?? null,
+        retentionPolicy,
+      });
+
+      router.push(`/chat/${conversation.conversation_id}`);
+    } catch (error) {
+      console.error(error);
+      setShowModal(true);
+    } finally {
+      setLoadingChat(false);
+    }
+  };
 
   const handleWhatsApp = () => {
     if (ownerPhone) {
@@ -44,13 +108,24 @@ export default function ContactButton({
   return (
     <>
       <div className="flex gap-2">
+        {!isOwner && (
+          <Button
+            variant="primary"
+            size="md"
+            onClick={handleChat}
+            className="flex-1"
+            title="Nhắn tin với chủ phòng"
+            disabled={loadingChat}
+          >
+            {loadingChat ? "Đang mở chat..." : "💬 Nhắn tin"}
+          </Button>
+        )}
         {ownerPhone && (
           <>
             <Button
-              variant="primary"
+              variant="secondary"
               size="md"
               onClick={handleWhatsApp}
-              className="flex-1"
               title="Liên hệ qua WhatsApp"
             >
               💬 WhatsApp
@@ -85,7 +160,6 @@ export default function ContactButton({
         </Button>
       </div>
 
-      {/* Contact Info Modal */}
       <Modal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
