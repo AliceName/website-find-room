@@ -1,12 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+
+interface Option {
+  value: string;
+  label: string;
+}
 
 interface SearchFilterProps {
   onSearch?: (filters: SearchFilters) => void;
   onReset?: () => void;
   onMapClick?: () => void;
   isMapOpen?: boolean;
+  cityOptions?: Option[];
+  districtOptions?: Option[];
+  amenityOptions?: Option[];
 }
 
 export interface SearchFilters {
@@ -15,6 +23,9 @@ export interface SearchFilters {
   priceRange?: string;
   areaRange?: string;
   sortBy?: string;
+  city?: string;
+  district?: string;
+  amenities?: string[];
 }
 
 export const ROOM_TYPES = [
@@ -62,21 +73,51 @@ export default function SearchFilter({
   onReset,
   onMapClick,
   isMapOpen,
+  cityOptions = [],
+  districtOptions = [],
+  amenityOptions = [],
 }: SearchFilterProps) {
   const [filters, setFilters] = useState<SearchFilters>({
     roomType: "",
     priceRange: "",
     areaRange: "",
     sortBy: "newest",
+    city: "",
+    district: "",
+    amenities: [],
   });
+  const [showAmenities, setShowAmenities] = useState(false);
+  const amenityRef = useRef<HTMLDivElement>(null);
 
-  const handleChange = (field: keyof SearchFilters, value: string) => {
-    const newFilters = { ...filters, [field]: value };
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (amenityRef.current && !amenityRef.current.contains(event.target as Node)) {
+        setShowAmenities(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleChange = (field: keyof SearchFilters, value: string | string[]) => {
+    let newFilters = { ...filters, [field]: value };
+    // Reset district when city changes
+    if (field === "city") {
+      newFilters = { ...newFilters, district: "" };
+    }
     setFilters(newFilters);
     // Auto search on filter change (except sort which handles itself)
     if (field !== "sortBy") {
       onSearch?.(newFilters);
     }
+  };
+
+  const toggleAmenity = (amenityId: string) => {
+    const current = filters.amenities || [];
+    const updated = current.includes(amenityId)
+      ? current.filter((a) => a !== amenityId)
+      : [...current, amenityId];
+    handleChange("amenities", updated);
   };
 
   const handleSearch = () => {
@@ -89,11 +130,20 @@ export default function SearchFilter({
       priceRange: "",
       areaRange: "",
       sortBy: "newest",
+      city: "",
+      district: "",
+      amenities: [],
     });
     onReset?.();
   };
 
-  const hasActiveFilters = filters.roomType || filters.priceRange || filters.areaRange;
+  const hasActiveFilters =
+    filters.roomType ||
+    filters.priceRange ||
+    filters.areaRange ||
+    filters.city ||
+    filters.district ||
+    (filters.amenities && filters.amenities.length > 0);
 
   return (
     <div className="w-full rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
@@ -164,6 +214,89 @@ export default function SearchFilter({
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* Thành phố */}
+          <div className="min-w-[160px] flex-1">
+            <select
+              value={filters.city || ""}
+              onChange={(e) => handleChange("city", e.target.value)}
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800 transition-all hover:border-blue-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            >
+              <option value="">Tất cả thành phố</option>
+              {cityOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Quận / Huyện */}
+          <div className="min-w-[160px] flex-1">
+            <select
+              value={filters.district || ""}
+              onChange={(e) => handleChange("district", e.target.value)}
+              disabled={!filters.city}
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800 transition-all hover:border-blue-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <option value="">
+                {filters.city ? "Tất cả quận/huyện" : "-- Chọn thành phố trước --"}
+              </option>
+              {districtOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Tiện ích */}
+          <div className="min-w-[160px] flex-1 relative" ref={amenityRef}>
+            <button
+              type="button"
+              onClick={() => setShowAmenities((prev) => !prev)}
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800 transition-all hover:border-blue-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-left flex items-center justify-between"
+            >
+              <span className="truncate">
+                {filters.amenities && filters.amenities.length > 0
+                  ? `${filters.amenities.length} tiện ích đã chọn`
+                  : "Tiện ích"}
+              </span>
+              <svg
+                className={`w-4 h-4 text-gray-400 transition-transform ${showAmenities ? "rotate-180" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {showAmenities && (
+              <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg p-2">
+                {amenityOptions.length === 0 ? (
+                  <div className="px-3 py-2 text-sm text-gray-400">Không có tiện ích</div>
+                ) : (
+                  amenityOptions.map((opt) => {
+                    const checked = filters.amenities?.includes(opt.value) ?? false;
+                    return (
+                      <label
+                        key={opt.value}
+                        className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover:bg-gray-50"
+                      >
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          checked={checked}
+                          onChange={() => toggleAmenity(opt.value)}
+                        />
+                        <span className="text-sm text-gray-700">{opt.label}</span>
+                      </label>
+                    );
+                  })
+                )}
+              </div>
+            )}
           </div>
         </div>
 

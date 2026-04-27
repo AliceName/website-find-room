@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
@@ -41,6 +41,7 @@ interface PostWithDetails {
         room_types: { room_type_id: string; room_type_name: string } | null;
         roomimages: { image_url: string; is_360: boolean | null }[];
         locations: { location_id: string; city: string; district: string; ward: string } | null;
+        roomamenities: { amenity_id: string; amenities: { amenity_id: string; amenity_name: string } | null }[];
     } | null;
 }
 
@@ -52,6 +53,7 @@ function RoomsContent() {
     const [isMapOpen, setIsMapOpen] = useState(true);
     const [isFiltering, setIsFiltering] = useState(false);
     const [currentFilters, setCurrentFilters] = useState<SearchFilters>({});
+    const [allAmenities, setAllAmenities] = useState<{ amenity_id: string; amenity_name: string }[]>([]);
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
@@ -74,31 +76,38 @@ function RoomsContent() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const postsRes = await supabase
-                .from("posts")
-                .select(`
-                    post_id,
-                    post_title,
-                    post_created_at,
-                    view_count,
-                    rooms:room_id (
-                        room_id,
-                        room_price,
-                        room_area,
-                        room_status,
-                        vr_url,
-                        latitude,
-                        longitude,
-                        room_types:room_type_id ( room_type_id, room_type_name ),
-                        roomimages ( image_url, is_360 ),
-                        locations:location_id ( location_id, city, district, ward )
-                    )
-                `)
-                .order("post_created_at", { ascending: false });
+            const [postsRes, amenitiesRes] = await Promise.all([
+                supabase
+                    .from("posts")
+                    .select(`
+                        post_id,
+                        post_title,
+                        post_created_at,
+                        view_count,
+                        rooms:room_id (
+                            room_id,
+                            room_price,
+                            room_area,
+                            room_status,
+                            vr_url,
+                            latitude,
+                            longitude,
+                            room_types:room_type_id ( room_type_id, room_type_name ),
+                            roomimages ( image_url, is_360 ),
+                            locations:location_id ( location_id, city, district, ward ),
+                            roomamenities ( amenity_id, amenities ( amenity_id, amenity_name ) )
+                        )
+                    `)
+                    .order("post_created_at", { ascending: false }),
+                supabase.from("amenities").select("amenity_id, amenity_name").order("amenity_name", { ascending: true }),
+            ]);
 
             if (postsRes.data) {
                 setPosts(postsRes.data as unknown as PostWithDetails[]);
                 setFiltered(postsRes.data as unknown as PostWithDetails[]);
+            }
+            if (amenitiesRes.data) {
+                setAllAmenities(amenitiesRes.data);
             }
         } catch (err) {
             console.error("Lỗi lấy dữ liệu:", err);
@@ -115,6 +124,42 @@ function RoomsContent() {
             max ? Number(max) : undefined,
         ];
     };
+
+    // Compute dynamic filter options based on current posts
+    const cityOptions = useMemo(() => {
+        const counts = new Map<string, number>();
+        posts.forEach((p) => {
+            const city = p.rooms?.locations?.city;
+            if (city) {
+                counts.set(city, (counts.get(city) || 0) + 1);
+            }
+        });
+        return Array.from(counts.entries())
+            .sort((a, b) => b[1] - a[1])
+            .map(([city, count]) => ({ value: city, label: `${city} (${count})` }));
+    }, [posts]);
+
+    const districtOptions = useMemo(() => {
+        const counts = new Map<string, number>();
+        posts.forEach((p) => {
+            const loc = p.rooms?.locations;
+            if (loc?.district) {
+                if (!currentFilters.city || loc.city === currentFilters.city) {
+                    counts.set(loc.district, (counts.get(loc.district) || 0) + 1);
+                }
+            }
+        });
+        return Array.from(counts.entries())
+            .sort((a, b) => b[1] - a[1])
+            .map(([district, count]) => ({ value: district, label: `${district} (${count})` }));
+    }, [posts, currentFilters.city]);
+
+    const amenityOptions = useMemo(() => {
+        return allAmenities.map((a) => ({
+            value: a.amenity_id,
+            label: a.amenity_name,
+        }));
+    }, [allAmenities]);
 
     const handleSearch = (filters: SearchFilters) => {
         setIsFiltering(true);
@@ -174,6 +219,24 @@ function RoomsContent() {
                     return area >= minArea;
                 }
                 return true;
+            });
+        }
+
+        // City filter
+        if (filters.city) {
+            result = result.filter((p) => p.rooms?.locations?.city === filters.city);
+        }
+
+        // District filter
+        if (filters.district) {
+            result = result.filter((p) => p.rooms?.locations?.district === filters.district);
+        }
+
+        // Amenities filter — room must have ALL selected amenities
+        if (filters.amenities && filters.amenities.length > 0) {
+            result = result.filter((p) => {
+                const roomAmenityIds = p.rooms?.roomamenities?.map((ra) => ra.amenity_id) || [];
+                return filters.amenities!.every((id) => roomAmenityIds.includes(id));
             });
         }
 
@@ -246,6 +309,9 @@ function RoomsContent() {
                         onReset={handleReset}
                         onMapClick={() => setIsMapOpen((prev) => !prev)}
                         isMapOpen={isMapOpen}
+                        cityOptions={cityOptions}
+                        districtOptions={districtOptions}
+                        amenityOptions={amenityOptions}
                     />
 
                     {/* MAP */}
