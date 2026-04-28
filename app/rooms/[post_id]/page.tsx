@@ -2,6 +2,7 @@ import RoomVirtualSection from '@/components/rooms/RoomVirtualSection'
 import RoomLocationMiniMap from '@/components/rooms/RoomLocationMiniMap'
 import ReviewSection from '@/components/rooms/ReviewSection'
 import FavoriteButton from '@/components/rooms/FavoriteButton'
+import ViewTracker from '@/components/rooms/ViewTracker'
 import { Badge, ContactButton } from '@/components/common'
 import { supabase } from '@/lib/supabaseClient'
 import { notFound } from 'next/navigation'
@@ -90,6 +91,7 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ pos
 
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900">
+            <ViewTracker postId={post_id} />
             <div className="mx-auto max-w-7xl space-y-10 px-4 py-6 md:px-10 md:py-10">
             {/* HEADER */}
             <header className="overflow-hidden rounded-[3rem] border border-app bg-surface px-6 py-6 shadow-sm md:px-8 md:py-8">
@@ -113,6 +115,9 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ pos
                                     {avgRating} ({reviewsData?.length} đánh giá)
                                 </Badge>
                             )}
+                            <Badge variant="secondary" size="md" icon="👁️">
+                                {(post.view_count ?? 0).toLocaleString('vi-VN')} lượt xem
+                            </Badge>
                         </div>
 
                         <h1 className="max-w-3xl text-3xl font-extrabold leading-tight tracking-tight text-slate-950 md:text-4xl">

@@ -23,73 +23,6 @@ export interface Database {
           amenity_name?: string
         }
       }
-      conversations: {
-        Row: {
-          conversation_id: string
-          renter_id: string
-          owner_id: string
-          post_id: string | null
-          room_id: string | null
-          conversation_status: 'active' | 'archived' | 'closed'
-          retention_policy: 'manual' | '3_days' | '7_days' | '30_days' | 'forever'
-          expires_at: string | null
-          last_message_at: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          conversation_id?: string
-          renter_id: string
-          owner_id: string
-          post_id?: string | null
-          room_id?: string | null
-          conversation_status?: 'active' | 'archived' | 'closed'
-          retention_policy?: 'manual' | '3_days' | '7_days' | '30_days' | 'forever'
-          expires_at?: string | null
-          last_message_at?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          conversation_id?: string
-          renter_id?: string
-          owner_id?: string
-          post_id?: string | null
-          room_id?: string | null
-          conversation_status?: 'active' | 'archived' | 'closed'
-          retention_policy?: 'manual' | '3_days' | '7_days' | '30_days' | 'forever'
-          expires_at?: string | null
-          last_message_at?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      conversation_user_states: {
-        Row: {
-          state_id: string
-          conversation_id: string
-          user_id: string
-          state: 'hidden' | 'deleted'
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          state_id?: string
-          conversation_id: string
-          user_id: string
-          state: 'hidden' | 'deleted'
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          state_id?: string
-          conversation_id?: string
-          user_id?: string
-          state?: 'hidden' | 'deleted'
-          created_at?: string
-          updated_at?: string
-        }
-      }
       favorites: {
         Row: {
           favority_id: string
@@ -130,41 +63,6 @@ export interface Database {
           ward?: string
         }
       }
-      messages: {
-        Row: {
-          message_id: string
-          conversation_id: string
-          sender_user_id: string
-          message_content: string
-          message_type: 'text' | 'system'
-          is_read: boolean
-          read_at: string | null
-          created_at: string
-          deleted_at: string | null
-        }
-        Insert: {
-          message_id?: string
-          conversation_id: string
-          sender_user_id: string
-          message_content: string
-          message_type?: 'text' | 'system'
-          is_read?: boolean
-          read_at?: string | null
-          created_at?: string
-          deleted_at?: string | null
-        }
-        Update: {
-          message_id?: string
-          conversation_id?: string
-          sender_user_id?: string
-          message_content?: string
-          message_type?: 'text' | 'system'
-          is_read?: boolean
-          read_at?: string | null
-          created_at?: string
-          deleted_at?: string | null
-        }
-      }
       posts: {
         Row: {
           post_id: string
@@ -174,6 +72,7 @@ export interface Database {
           post_created_at: string | null
           post_update_at: string | null
           post_expired_at: string | null
+          view_count: number | null
         }
         Insert: {
           post_id?: string
@@ -183,6 +82,7 @@ export interface Database {
           post_created_at?: string | null
           post_update_at?: string | null
           post_expired_at?: string | null
+          view_count?: number | null
         }
         Update: {
           post_id?: string
@@ -192,6 +92,7 @@ export interface Database {
           post_created_at?: string | null
           post_update_at?: string | null
           post_expired_at?: string | null
+          view_count?: number | null
         }
       }
       reviews: {
@@ -355,12 +256,13 @@ export interface Database {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      increment_post_view: {
+        Args: { post_id_param: string }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never
     }
   }
 }
-
-export {}

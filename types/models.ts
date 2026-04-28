@@ -29,6 +29,7 @@ export type Post = {
     post_created_at?: string;
     post_update_at?: string;
     post_expired_at?: string;
+    view_count?: number;
 };
 
 export type Favorite = {

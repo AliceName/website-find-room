@@ -1,154 +1,123 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Button from "./Button";
-import Input from "./Input";
-import LocationSelect from "./LocationSelect";
-import AmenityTag from "./AmenityTag";
+import { useState, useRef, useEffect } from "react";
+
+interface Option {
+  value: string;
+  label: string;
+}
 
 interface SearchFilterProps {
   onSearch?: (filters: SearchFilters) => void;
   onReset?: () => void;
   onMapClick?: () => void;
   isMapOpen?: boolean;
-  amenities?: Array<{ amenity_id: string; amenity_name: string; icon?: string }>;
-  cityOptions?: Array<{ value: string; label: string }>;
+  cityOptions?: Option[];
+  districtOptions?: Option[];
+  amenityOptions?: Option[];
 }
 
 export interface SearchFilters {
   keyword?: string;
+  roomType?: string;
+  priceRange?: string;
+  areaRange?: string;
+  sortBy?: string;
   city?: string;
   district?: string;
-  ward?: string;
-  minPrice?: number;
-  maxPrice?: number;
-  minArea?: number;
-  maxArea?: number;
   amenities?: string[];
-  roomType?: string;
 }
 
-const ROOM_TYPES = [
+export const ROOM_TYPES = [
+  { value: "", label: "Loại phòng" },
   { value: "phong_tro", label: "Phòng trọ" },
   { value: "can_ho_mini", label: "Căn hộ mini" },
   { value: "chung_cu", label: "Chung cư" },
   { value: "nha_nguyen_can", label: "Nhà nguyên căn" },
+  { value: "ky_tuc_xa", label: "Ký túc xá" },
 ];
 
-const AMENITY_ICON_MAP: Record<string, string> = {
-  "wifi": "📶",
-  "internet": "📶",
-  "máy lạnh": "❄️",
-  "may lanh": "❄️",
-  "máy giặt": "🫧",
-  "may giat": "🫧",
-  "máy nước nóng": "🚿",
-  "may nuoc nong": "🚿",
-  "tủ lạnh": "🧊",
-  "tu lanh": "🧊",
-  "giường": "🛏️",
-  "giuong": "🛏️",
-  "tủ quần áo": "🗄️",
-  "tu quan ao": "🗄️",
-  "bàn ghế": "🪑",
-  "ban ghe": "🪑",
-  "nấu ăn": "🍳",
-  "nau an": "🍳",
-  "bếp từ": "🍲",
-  "bep tu": "🍲",
-  "nhà vệ sinh riêng": "🚽",
-  "nha ve sinh rieng": "🚽",
-  "ban công": "🌿",
-  "ban cong": "🌿",
-  "cửa sổ thoáng": "🪟",
-  "cua so thoang": "🪟",
-  "thang máy": "🛗",
-  "thang may": "🛗",
-  "chỗ để xe": "🛵",
-  "cho de xe": "🛵",
-  "giờ tự do": "🕐",
-  "gio tu do": "🕐",
-  "khóa vân tay": "🔐",
-  "khoa van tay": "🔐",
-  "camera": "📷",
-  "an ninh": "🛡️",
-  "pccc": "🧯",
-  "dọn vệ sinh": "🧹",
-  "don ve sinh": "🧹",
-  "cho nuôi thú cưng": "🐾",
-  "cho nuoi thu cung": "🐾",
-  "không chung chủ": "🏠",
-  "khong chung chu": "🏠",
-  "gần chợ": "🛒",
-  "gan cho": "🛒",
-  "gần siêu thị": "🛒",
-  "gan sieu thi": "🛒",
-};
+const PRICE_RANGES = [
+  { value: "", label: "Giá thuê" },
+  { value: "0-1000000", label: "< 1 triệu" },
+  { value: "1000000-2000000", label: "1 - 2 triệu" },
+  { value: "2000000-3000000", label: "2 - 3 triệu" },
+  { value: "3000000-5000000", label: "3 - 5 triệu" },
+  { value: "5000000-7000000", label: "5 - 7 triệu" },
+  { value: "7000000-10000000", label: "7 - 10 triệu" },
+  { value: "10000000-", label: "> 10 triệu" },
+];
 
-const getAmenityIcon = (name: string, fallback = "✨") => {
-  const normalized = name.toLowerCase().trim();
-  const exact = AMENITY_ICON_MAP[normalized];
-  if (exact) return exact;
+const AREA_RANGES = [
+  { value: "", label: "Diện tích" },
+  { value: "0-20", label: "< 20 m²" },
+  { value: "20-30", label: "20 - 30 m²" },
+  { value: "30-50", label: "30 - 50 m²" },
+  { value: "50-70", label: "50 - 70 m²" },
+  { value: "70-100", label: "70 - 100 m²" },
+  { value: "100-", label: "> 100 m²" },
+];
 
-  const match = Object.entries(AMENITY_ICON_MAP).find(([key]) => normalized.includes(key));
-  return match?.[1] || fallback;
-};
+const SORT_OPTIONS = [
+  { value: "newest", label: "Mặc định" },
+  { value: "newest", label: "Tin mới nhất" },
+  { value: "oldest", label: "Tin cũ nhất" },
+  { value: "price_asc", label: "Giá tăng dần" },
+  { value: "price_desc", label: "Giá giảm dần" },
+  { value: "area_asc", label: "Diện tích tăng dần" },
+  { value: "area_desc", label: "Diện tích giảm dần" },
+];
 
 export default function SearchFilter({
   onSearch,
   onReset,
   onMapClick,
   isMapOpen,
-  amenities = [],
   cityOptions = [],
+  districtOptions = [],
+  amenityOptions = [],
 }: SearchFilterProps) {
-  const defaultCity = cityOptions[0]?.value || "TP. Hồ Chí Minh";
   const [filters, setFilters] = useState<SearchFilters>({
-    keyword: "",
-    city: defaultCity,
-    district: "",
-    ward: "",
-    minPrice: undefined,
-    maxPrice: undefined,
-    minArea: undefined,
-    maxArea: undefined,
-    amenities: [],
     roomType: "",
+    priceRange: "",
+    areaRange: "",
+    sortBy: "newest",
+    city: "",
+    district: "",
+    amenities: [],
   });
+  const [showAmenities, setShowAmenities] = useState(false);
+  const amenityRef = useRef<HTMLDivElement>(null);
 
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [showAllAmenities, setShowAllAmenities] = useState(false);
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (amenityRef.current && !amenityRef.current.contains(event.target as Node)) {
+        setShowAmenities(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
-  const sortedAmenities = useMemo(
-    () =>
-      [...amenities].sort((a, b) => {
-        const iconA = a.icon || getAmenityIcon(a.amenity_name);
-        const iconB = b.icon || getAmenityIcon(b.amenity_name);
-        if (iconA !== iconB) return iconA.localeCompare(iconB, "vi");
-        return a.amenity_name.localeCompare(b.amenity_name, "vi");
-      }),
-    [amenities]
-  );
-  const visibleAmenities = showAllAmenities ? sortedAmenities : sortedAmenities.slice(0, 8);
-  const hiddenCount = Math.max(sortedAmenities.length - visibleAmenities.length, 0);
-
-  // Hàm xử lý thay đổi số (Giá & Diện tích) để tránh lỗi NaN
-  const handleNumberChange = (field: keyof SearchFilters, value: string) => {
-    const numericValue = value === "" ? undefined : Number(value);
-    setFilters((prev) => ({ ...prev, [field]: numericValue }));
-  };
-
-  const handleLocationChange = (city: string, district: string, ward: string) => {
-    setFilters((prev) => ({ ...prev, city, district, ward }));
+  const handleChange = (field: keyof SearchFilters, value: string | string[]) => {
+    let newFilters = { ...filters, [field]: value };
+    // Reset district when city changes
+    if (field === "city") {
+      newFilters = { ...newFilters, district: "" };
+    }
+    setFilters(newFilters);
+    // Auto search on filter change (except sort which handles itself)
+    if (field !== "sortBy") {
+      onSearch?.(newFilters);
+    }
   };
 
   const toggleAmenity = (amenityId: string) => {
-    setFilters((prev) => ({
-      ...prev,
-      amenities: prev.amenities?.includes(amenityId)
-        ? prev.amenities.filter((id) => id !== amenityId)
-        : [...(prev.amenities || []), amenityId],
-    }));
+    const current = filters.amenities || [];
+    const updated = current.includes(amenityId)
+      ? current.filter((a) => a !== amenityId)
+      : [...current, amenityId];
+    handleChange("amenities", updated);
   };
 
   const handleSearch = () => {
@@ -157,186 +126,212 @@ export default function SearchFilter({
 
   const handleReset = () => {
     setFilters({
-      keyword: "",
-      city: defaultCity,
-      district: "",
-      ward: "",
-      minPrice: undefined,
-      maxPrice: undefined,
-      minArea: undefined,
-      maxArea: undefined,
-      amenities: [],
       roomType: "",
+      priceRange: "",
+      areaRange: "",
+      sortBy: "newest",
+      city: "",
+      district: "",
+      amenities: [],
     });
     onReset?.();
   };
 
+  const hasActiveFilters =
+    filters.roomType ||
+    filters.priceRange ||
+    filters.areaRange ||
+    filters.city ||
+    filters.district ||
+    (filters.amenities && filters.amenities.length > 0);
+
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-2 space-y-2 shadow-md">
-      {/* Search Keyword */}
-      <div className="transition-all duration-[180ms] ease-[var(--ease-out-quart)]">
-        <Input
-          type="text"
-          placeholder="Tìm kiếm phòng trọ..."
-          value={filters.keyword || ""}
-          onChange={(e) =>
-            setFilters((prev) => ({ ...prev, keyword: e.target.value }))
-          }
-          icon="🔍"
-        />
-      </div>
+    <div className="w-full rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-2">
+        {/* Dropdown filters */}
+        <div className="flex flex-1 flex-wrap gap-2">
+          {/* Loại phòng */}
+          <div className="min-w-[140px] flex-1">
+            <select
+              value={filters.roomType || ""}
+              onChange={(e) => handleChange("roomType", e.target.value)}
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800 transition-all hover:border-blue-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            >
+              {ROOM_TYPES.map((type) => (
+                <option key={type.value} value={type.value}>
+                  {type.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
-      {/* Toggle Bộ lọc */}
-      <button
-        type="button"
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between rounded-lg bg-gray-50 p-2 text-sm transition-all duration-[180ms] ease-[var(--ease-out-quart)] hover:bg-gray-100 active:scale-[0.99]"
-      >
-        <span className="font-bold text-gray-700">Bộ lọc nâng cao</span>
-        <span className="text-sm">{isExpanded ? "▼" : "▶"}</span>
-      </button>
+          {/* Giá thuê */}
+          <div className="min-w-[140px] flex-1">
+            <select
+              value={filters.priceRange || ""}
+              onChange={(e) => handleChange("priceRange", e.target.value)}
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800 transition-all hover:border-blue-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            >
+              {PRICE_RANGES.map((range) => (
+                <option key={range.value} value={range.value}>
+                  {range.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
-      <div className={`grid transition-[grid-template-rows,opacity] duration-[220ms] ease-[var(--ease-out-quart)] ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
-        <div className="overflow-hidden">
-          <div className="space-y-3 border-t border-gray-200 pt-2">
-            {/* 1. Vị trí */}
-            <div className="transition-all duration-[180ms] ease-[var(--ease-out-quart)]">
-              <LocationSelect
-                city={filters.city}
-                district={filters.district}
-                ward={filters.ward}
-                onLocationChange={handleLocationChange}
-                cityOptions={cityOptions}
-              />
-            </div>
+          {/* Diện tích */}
+          <div className="min-w-[140px] flex-1">
+            <select
+              value={filters.areaRange || ""}
+              onChange={(e) => handleChange("areaRange", e.target.value)}
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800 transition-all hover:border-blue-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            >
+              {AREA_RANGES.map((range) => (
+                <option key={range.value} value={range.value}>
+                  {range.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
-            {/* 2. Loại phòng */}
-            <div className="transition-all duration-[180ms] ease-[var(--ease-out-quart)]">
-              <label className="mb-1 block text-xs font-bold uppercase text-gray-700">
-                Loại phòng
-              </label>
-              <select
-                value={filters.roomType || ""}
-                onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, roomType: e.target.value }))
-                }
-                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-800 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+          {/* Sắp xếp */}
+          <div className="min-w-[140px] flex-1">
+            <select
+              value={filters.sortBy || "newest"}
+              onChange={(e) => {
+                handleChange("sortBy", e.target.value);
+                // Auto search on sort change
+                setTimeout(() => {
+                  onSearch?.({ ...filters, sortBy: e.target.value });
+                }, 0);
+              }}
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800 transition-all hover:border-blue-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            >
+              {SORT_OPTIONS.map((opt) => (
+                <option key={opt.value + opt.label} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Thành phố */}
+          <div className="min-w-[160px] flex-1">
+            <select
+              value={filters.city || ""}
+              onChange={(e) => handleChange("city", e.target.value)}
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800 transition-all hover:border-blue-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            >
+              <option value="">Tất cả thành phố</option>
+              {cityOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Quận / Huyện */}
+          <div className="min-w-[160px] flex-1">
+            <select
+              value={filters.district || ""}
+              onChange={(e) => handleChange("district", e.target.value)}
+              disabled={!filters.city}
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800 transition-all hover:border-blue-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <option value="">
+                {filters.city ? "Tất cả quận/huyện" : "-- Chọn thành phố trước --"}
+              </option>
+              {districtOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Tiện ích */}
+          <div className="min-w-[160px] flex-1 relative" ref={amenityRef}>
+            <button
+              type="button"
+              onClick={() => setShowAmenities((prev) => !prev)}
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800 transition-all hover:border-blue-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-left flex items-center justify-between"
+            >
+              <span className="truncate">
+                {filters.amenities && filters.amenities.length > 0
+                  ? `${filters.amenities.length} tiện ích đã chọn`
+                  : "Tiện ích"}
+              </span>
+              <svg
+                className={`w-4 h-4 text-gray-400 transition-transform ${showAmenities ? "rotate-180" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                <option value="">-- Tất cả loại --</option>
-                {ROOM_TYPES.map((type) => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* 3. Khoảng giá (Input thay cho Slider) */}
-            <div className="space-y-1 transition-all duration-[180ms] ease-[var(--ease-out-quart)]">
-              <label className="block text-xs font-bold uppercase text-gray-700">Giá thuê (VNĐ)</label>
-              <div className="grid grid-cols-2 gap-2">
-                <Input
-                  type="number"
-                  placeholder="Giá từ..."
-                  value={filters.minPrice ?? ""}
-                  onChange={(e) => handleNumberChange("minPrice", e.target.value)}
-                />
-                <Input
-                  type="number"
-                  placeholder="Giá đến..."
-                  value={filters.maxPrice ?? ""}
-                  onChange={(e) => handleNumberChange("maxPrice", e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* 4. Diện tích (Input thay cho Slider) */}
-            <div className="space-y-1 transition-all duration-[180ms] ease-[var(--ease-out-quart)]">
-              <label className="block text-xs font-bold uppercase text-gray-700">Diện tích (m²)</label>
-              <div className="grid grid-cols-2 gap-2">
-                <Input
-                  type="number"
-                  placeholder="Từ..."
-                  value={filters.minArea ?? ""}
-                  onChange={(e) => handleNumberChange("minArea", e.target.value)}
-                />
-                <Input
-                  type="number"
-                  placeholder="Đến..."
-                  value={filters.maxArea ?? ""}
-                  onChange={(e) => handleNumberChange("maxArea", e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* 5. Tiện ích */}
-            {amenities.length > 0 && (
-              <div className="transition-all duration-[180ms] ease-[var(--ease-out-quart)]">
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <label className="block text-xs font-bold uppercase text-gray-700">
-                    Tiện ích
-                  </label>
-                  <span className="text-[11px] text-gray-500">
-                    {visibleAmenities.length}/{sortedAmenities.length}
-                  </span>
-                </div>
-                {!filters.city || !filters.district ? (
-                  <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-2 text-xs text-yellow-700">
-                    ⚠️ Vui lòng chọn thành phố và quận huyện trước
-                  </div>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {showAmenities && (
+              <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg p-2">
+                {amenityOptions.length === 0 ? (
+                  <div className="px-3 py-2 text-sm text-gray-400">Không có tiện ích</div>
                 ) : (
-                  <>
-                    <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-                      {visibleAmenities.map((amenity) => (
-                        <AmenityTag
-                          key={amenity.amenity_id}
-                          name={amenity.amenity_name}
-                          icon={amenity.icon || getAmenityIcon(amenity.amenity_name)}
-                          selected={filters.amenities?.includes(amenity.amenity_id)}
-                          onToggle={() => toggleAmenity(amenity.amenity_id)}
-                        />
-                      ))}
-                    </div>
-
-                    {hiddenCount > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setShowAllAmenities((prev) => !prev)}
-                        className="mt-2 text-xs font-semibold text-blue-600 transition-colors hover:text-blue-700"
+                  amenityOptions.map((opt) => {
+                    const checked = filters.amenities?.includes(opt.value) ?? false;
+                    return (
+                      <label
+                        key={opt.value}
+                        className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover:bg-gray-50"
                       >
-                        {showAllAmenities
-                          ? "Thu gọn tiện ích"
-                          : `Xem thêm ${hiddenCount} tiện ích`}
-                      </button>
-                    )}
-                  </>
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          checked={checked}
+                          onChange={() => toggleAmenity(opt.value)}
+                        />
+                        <span className="text-sm text-gray-700">{opt.label}</span>
+                      </label>
+                    );
+                  })
                 )}
               </div>
             )}
           </div>
         </div>
-      </div>
 
-      {/* Nút hành động */}
-      <div className="flex gap-2 border-t border-gray-200 pt-2 transition-all duration-[180ms] ease-[var(--ease-out-quart)]">
-        <Button variant="ghost" className="flex-1 text-xs py-1" onClick={handleReset}>
-          Xóa bộ lọc
-        </Button>
-        <Button variant="primary" className="flex-1 text-xs py-1" onClick={handleSearch}>
-          🔍 Tìm kiếm
-        </Button>
-        <button
-          type="button"
-          className={`flex-1 px-2 py-1 text-xs rounded-lg font-bold transition-all flex items-center justify-center gap-1 ${
-            isMapOpen
-              ? "bg-red-50 text-red-600 border border-red-200"
-              : "bg-green-600 text-white hover:bg-green-700"
-          }`}
-          onClick={onMapClick}
-        >
-          {isMapOpen ? "✕ Đóng bản đồ" : "📍 Xem Bản đồ"}
-        </button>
+        {/* Action buttons */}
+        <div className="flex items-center gap-2 shrink-0">
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={handleReset}
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100 hover:text-gray-800"
+            >
+              Xóa lọc
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleSearch}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-blue-700 active:scale-[0.98]"
+          >
+            🔍 Tìm kiếm
+          </button>
+          <button
+            type="button"
+            onClick={onMapClick}
+            className={`rounded-lg px-3 py-2 text-sm font-bold transition-all flex items-center gap-1 active:scale-[0.98] ${
+              isMapOpen
+                ? "bg-red-50 text-red-600 border border-red-200 hover:bg-red-100"
+                : "bg-green-600 text-white hover:bg-green-700"
+            }`}
+          >
+            {isMapOpen ? "✕ Đóng bản đồ" : "📍 Bản đồ"}
+          </button>
+        </div>
       </div>
     </div>
   );
 }
+

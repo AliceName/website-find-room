@@ -41,6 +41,7 @@ export default async function HomePage() {
             post_id,
             post_title,
             post_created_at,
+            view_count,
             rooms:room_id (
                 room_id,
                 room_price,

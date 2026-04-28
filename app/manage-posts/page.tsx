@@ -12,6 +12,7 @@ interface Post {
     user_id: string | null;
     post_created_at: string | null;
     post_update_at: string | null;   // ← tên đúng theo schema
+    view_count: number | null;
     rooms?: {
         room_status: boolean | null;
         room_price: number;
@@ -60,6 +61,7 @@ export default function ManagePostsPage() {
                     user_id,
                     post_created_at,
                     post_update_at,
+                    view_count,
                     rooms:room_id (
                         room_status,
                         room_price,
@@ -233,6 +235,7 @@ export default function ManagePostsPage() {
                                             <div className="mt-1 text-xs text-gray-400">
                                                 Đăng ngày {post.post_created_at ? new Date(post.post_created_at).toLocaleDateString('vi-VN') : '—'}
                                                 {post.post_update_at && ` · Cập nhật ${new Date(post.post_update_at).toLocaleDateString('vi-VN')}`}
+                                                {' · '}👁️ {(post.view_count ?? 0).toLocaleString('vi-VN')} lượt xem
                                             </div>
                                         </div>
 

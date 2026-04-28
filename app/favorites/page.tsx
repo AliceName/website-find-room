@@ -13,6 +13,7 @@ interface FavoritePost {
         post_id: string;
         post_title: string;
         post_created_at: string | null;
+        view_count: number | null;
         rooms: {
             room_id: string;
             room_price: number;
@@ -51,6 +52,7 @@ export default function FavoritesPage() {
                     post_id,
                     post_title,
                     post_created_at,
+                    view_count,
                     rooms:room_id (
                         room_id,
                         room_price,
