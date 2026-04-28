@@ -60,17 +60,7 @@ function MapAutoResize({
 
     useEffect(() => {
         const timer = setTimeout(() => {
-            const m = map as any;
-            if (!m || !m._mapPane || !m.getContainer) return;
-
-            const container = m.getContainer();
-            if (!container || !container.isConnected) return;
-
-            try {
-                m.invalidateSize();
-            } catch {
-                return;
-            }
+            map.invalidateSize();
 
             // Chỉ flyTo theo post khi KHÔNG có searchLocation
             if (!searchLocation && posts && posts.length > 0) {
@@ -79,15 +69,9 @@ function MapAutoResize({
                 );
                 if (firstPost) {
                     const { latitude, longitude } = firstPost.rooms;
-                    requestAnimationFrame(() => {
-                        try {
-                            m.flyTo([Number(latitude), Number(longitude)], 11, {
-                                animate: true,
-                                duration: 1.2,
-                            });
-                        } catch {
-                            // ignore transient map lifecycle errors
-                        }
+                    map.flyTo([Number(latitude), Number(longitude)], 11, {
+                        animate: true,
+                        duration: 1.5,
                     });
                 }
             }
@@ -99,59 +83,6 @@ function MapAutoResize({
     return null;
 }
 
-// ✅ Card từng bài đăng trong Popup — có ảnh thumbnail
-function PostPopupCard({ p }: { p: any }) {
-    const thumbnail = p.rooms?.roomimages?.find((img: any) => img.is_360 === false)?.image_url ?? null;
-
-    return (
-        <Link
-            href={`/rooms/${p.post_id}`}
-            className="block group rounded-lg overflow-hidden border border-gray-100 hover:border-blue-300 hover:shadow-md transition-all"
-        >
-            {/* Ảnh thumbnail */}
-            {thumbnail ? (
-                <div className="w-full h-[120px] overflow-hidden bg-gray-100 relative">
-                    <img
-                        src={thumbnail}
-                        alt={p.post_title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    {/* Badge giá nổi trên ảnh */}
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent px-2 py-1">
-                        <span className="text-white font-black text-sm">
-                            {p.rooms.room_price.toLocaleString()}đ
-                        </span>
-                    </div>
-                </div>
-            ) : (
-                // Placeholder nếu không có ảnh
-                <div className="w-full h-[80px] bg-gradient-to-br from-blue-50 to-gray-100 flex items-center justify-center">
-                    <span className="text-3xl">🏠</span>
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/40 to-transparent px-2 py-1">
-                        <span className="text-white font-black text-sm">
-                            {p.rooms.room_price.toLocaleString()}đ
-                        </span>
-                    </div>
-                </div>
-            )}
-
-            {/* Thông tin bên dưới ảnh */}
-            <div className="p-2">
-                <p className="font-bold text-xs text-gray-800 line-clamp-2 group-hover:text-blue-600 leading-snug">
-                    {p.post_title}
-                </p>
-                <div className="flex items-center justify-between mt-1.5">
-                    <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
-                        📐 {p.rooms.room_area} m²
-                    </span>
-                    <span className="text-[10px] text-blue-500 font-semibold">
-                        Xem chi tiết →
-                    </span>
-                </div>
-            </div>
-        </Link>
-    );
-}
 export default function MapView({
     posts,
     filters,
@@ -238,21 +169,34 @@ export default function MapView({
 
                     return (
                         <Marker key={key} position={[lat, lng]} icon={postIcon}>
-                            <Popup
-                                minWidth={220}
-                                maxWidth={260}
-                                className="map-popup-clean"
-                            >
-                                {/* Header số lượng */}
-                                <div className="px-1 pt-1 pb-2">
-                                    <h3 className="font-bold text-sm text-blue-600 border-b border-gray-100 pb-1.5 mb-2">
+                            <Popup>
+                                <div className="max-h-[300px] overflow-y-auto w-[260px] p-1">
+                                    <h3 className="font-bold border-b pb-2 mb-2 text-blue-600">
                                         📍 {postsAtLocation.length} bài đăng tại đây
                                     </h3>
-
-                                    {/* Danh sách bài đăng — mỗi cái có ảnh */}
-                                    <div className="space-y-2 max-h-[340px] overflow-y-auto pr-0.5">
+                                    <div className="space-y-3">
                                         {postsAtLocation.map((p: any) => (
-                                            <PostPopupCard key={p.post_id} p={p} />
+                                            <div key={p.post_id} className="pb-2 border-b last:border-b-0 group">
+                                                <Link
+                                                    href={`/rooms/${p.post_id}`}
+                                                    className="block hover:bg-gray-50 p-1 rounded transition"
+                                                >
+                                                    <p className="font-bold text-sm text-gray-800 line-clamp-2 group-hover:text-blue-600">
+                                                        {p.post_title}
+                                                    </p>
+                                                    <div className="flex justify-between mt-1">
+                                                        <span className="text-blue-600 font-bold text-sm">
+                                                            {p.rooms.room_price.toLocaleString()}đ
+                                                        </span>
+                                                        <span className="text-[10px] text-gray-400 bg-gray-100 px-1 rounded">
+                                                            {p.rooms.room_area} m²
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-[11px] text-blue-400 mt-1 italic">
+                                                        Xem chi tiết →
+                                                    </p>
+                                                </Link>
+                                            </div>
                                         ))}
                                     </div>
                                 </div>

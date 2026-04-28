@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState, Suspense, useMemo } from "react";
+import { useEffect, useState, useCallback, Suspense, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import PostCard from "@/components/rooms/PostCard";
-import dynamic from "next/dynamic";
+import MapView from "@/components/map/MapView";
 import {
     SearchFilter,
     Pagination,
@@ -15,15 +15,6 @@ import {
 } from "@/components/common";
 import type { SearchFilters } from "@/components/common";
 import { ROOM_TYPES } from "@/components/common/SearchFilter";
-
-const MapView = dynamic(() => import("@/components/map/MapView"), {
-    ssr: false,
-    loading: () => (
-        <div className="h-full bg-gray-100 flex items-center justify-center text-gray-400 rounded-3xl">
-            Đang khởi tạo bản đồ...
-        </div>
-    ),
-});
 
 interface PostWithDetails {
     post_id: string;
@@ -50,10 +41,20 @@ function RoomsContent() {
     const [posts, setPosts] = useState<PostWithDetails[]>([]);
     const [filtered, setFiltered] = useState<PostWithDetails[]>([]);
     const [loading, setLoading] = useState(true);
+<<<<<<< HEAD
+    const [amenities, setAmenities] = useState<any[]>([]);
+    const [isMapOpen, setIsMapOpen] = useState(false);
+    
+    // Lưu trữ filters hiện tại để MapView có thể phản ứng
+    const [currentFilters, setCurrentFilters] = useState<SearchFilters>({
+        keyword: searchParams.get('search') || ''
+    });
+=======
     const [isMapOpen, setIsMapOpen] = useState(true);
     const [isFiltering, setIsFiltering] = useState(false);
     const [currentFilters, setCurrentFilters] = useState<SearchFilters>({});
     const [allAmenities, setAllAmenities] = useState<{ amenity_id: string; amenity_name: string }[]>([]);
+>>>>>>> b2ba66bc35f45c1472b3ded61e3657e1a93f695c
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
@@ -162,8 +163,7 @@ function RoomsContent() {
     }, [allAmenities]);
 
     const handleSearch = (filters: SearchFilters) => {
-        setIsFiltering(true);
-        setCurrentFilters(filters);
+        setCurrentFilters(filters); // Cập nhật state filters để truyền cho MapView
         let result = [...posts];
 
         // Keyword search from URL or direct
@@ -265,24 +265,21 @@ function RoomsContent() {
 
         setFiltered(result);
         setCurrentPage(1);
-        requestAnimationFrame(() => setIsFiltering(false));
     };
 
     const handleReset = () => {
-        setIsFiltering(true);
         setCurrentFilters({});
         setFiltered(posts);
         setCurrentPage(1);
-        requestAnimationFrame(() => setIsFiltering(false));
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 flex flex-col text-slate-900">
+        <div className="min-h-screen bg-gray-50 flex flex-col">
             {/* HEADER */}
-            <div className="sticky top-0 z-30 border-b border-app bg-surface/95 py-3 px-4 backdrop-blur">
-                <div className="mx-auto flex max-w-screen-2xl items-center justify-between gap-3">
+            <div className="bg-white border-b border-gray-100 py-3 px-4 sticky top-0 z-30">
+                <div className="max-w-screen-2xl mx-auto flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
-                        <h1 className="whitespace-nowrap text-xl font-black text-slate-950">
+                        <h1 className="text-xl font-black text-gray-900 whitespace-nowrap">
                             🏠 FindRoom
                         </h1>
                         {!loading && (
@@ -293,7 +290,7 @@ function RoomsContent() {
                     </div>
                     <Link
                         href="/"
-                        className="text-sm font-medium text-slate-500 transition hover:text-accent-app"
+                        className="text-sm text-gray-500 hover:text-blue-600 font-medium transition"
                     >
                         ← Trang chủ
                     </Link>
@@ -301,6 +298,62 @@ function RoomsContent() {
             </div>
 
             {/* MAIN LAYOUT */}
+<<<<<<< HEAD
+            <div className="flex-1 max-w-screen-2xl mx-auto w-full px-4 py-4 overflow-hidden">
+                <div className="flex gap-4 h-full min-h-[calc(100vh-100px)]">
+
+                    {/* CỘT TRÁI: Bộ lọc */}
+                    <aside className="w-72 shrink-0 overflow-y-auto hidden md:block">
+                        <SearchFilter
+                            onSearch={handleSearch}
+                            onReset={handleReset}
+                            onMapClick={() => setIsMapOpen((prev) => !prev)}
+                            isMapOpen={isMapOpen}
+                            amenities={amenities}
+                        />
+                    </aside>
+
+                    {/* CỘT PHẢI: Nội dung chính */}
+                    <div className="flex-1 flex flex-col gap-4 overflow-hidden">
+
+                        {/* BẢN ĐỒ - Tối ưu hóa việc truyền props */}
+                        {isMapOpen && (
+                            <div className="h-80 rounded-2xl overflow-hidden border border-gray-200 shadow-sm bg-white shrink-0">
+                                <MapView 
+                                    posts={filtered} 
+                                    filters={currentFilters} 
+                                />
+                            </div>
+                        )}
+
+                        {/* DANH SÁCH PHÒNG */}
+                        <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar">
+                            {loading ? (
+                                <Loader fullScreen={false} text="Đang tìm phòng tốt nhất cho bạn..." />
+                            ) : filtered.length === 0 ? (
+                                <EmptyState
+                                    icon="🏚️"
+                                    title="Không tìm thấy phòng trọ"
+                                    description="Hãy thử nới lỏng bộ lọc hoặc tìm kiếm khu vực lân cận"
+                                    action={{
+                                        label: "Đặt lại tất cả bộ lọc",
+                                        onClick: handleReset,
+                                    }}
+                                />
+                            ) : (
+                                <>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
+                                        {paginatedPosts.map((post) => (
+                                            <Link
+                                                key={post.post_id}
+                                                href={`/rooms/${post.post_id}`}
+                                                className="block transition-transform hover:-translate-y-1"
+                                            >
+                                                <PostCard post={post as any} />
+                                            </Link>
+                                        ))}
+                                    </div>
+=======
             <div className="mx-auto w-full max-w-screen-2xl flex-1 overflow-hidden px-4 py-5">
                 <div className="flex flex-col gap-5">
                     {/* FILTER BAR - Horizontal */}
@@ -325,6 +378,7 @@ function RoomsContent() {
                             </div>
                         )}
                     </div>
+>>>>>>> b2ba66bc35f45c1472b3ded61e3657e1a93f695c
 
                     {/* ROOM LIST */}
                     <div className={`flex-1 overflow-y-auto pr-1 custom-scrollbar transition-opacity duration-[220ms] ease-[var(--ease-out-quart)] ${isFiltering ? "opacity-70" : "opacity-100"}`}>

@@ -2,23 +2,15 @@
 @import "@photo-sphere-viewer/core/index.css";
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
-  --surface: #ffffff;
-  --surface-muted: #f1f5f9;
-  --surface-strong: #e2e8f0;
-  --border: #e2e8f0;
-  --accent: #2563eb;
-  --accent-strong: #1d4ed8;
-  --text-muted: #64748b;
-  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
-  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
-  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --background: #ffffff;
+  --foreground: #171717;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -31,62 +23,9 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), system-ui, sans-serif;
-  text-rendering: optimizeLegibility;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
-@keyframes fadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.bg-surface {
-  background: var(--surface);
-}
-
-.bg-surface-muted {
-  background: var(--surface-muted);
-}
-
-.border-app {
-  border-color: var(--border);
-}
-
-.text-muted-app {
-  color: var(--text-muted);
-}
-
-.text-accent-app {
-  color: var(--accent);
-}
-
-.bg-accent-app {
-  background: var(--accent);
-}
-
-.bg-accent-app-hover:hover {
-  background: var(--accent-strong);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    animation-delay: 0ms !important;
-    transition-duration: 0.01ms !important;
-    transition-delay: 0ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
-.font-sans {
-  font-family: var(--font-sans), system-ui, sans-serif;
+.font-sanf {
+  font-family: var(--font-sans);
 }
