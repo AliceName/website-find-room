@@ -1,6 +1,7 @@
 import RoomVirtualSection from '@/components/rooms/RoomVirtualSection'
 import ReviewSection from '@/components/rooms/ReviewSection'
 import FavoriteButton from '@/components/rooms/FavoriteButton'
+import ViewTracker from '@/components/rooms/ViewTracker'
 import { Badge, ContactButton } from '@/components/common'
 import { supabase } from '@/lib/supabaseClient'
 import { notFound } from 'next/navigation'
@@ -16,7 +17,7 @@ type PostDetail = Database['public']['Tables']['posts']['Row'] & {
             amenities: { amenity_name: string } | null;
         }[];
     }) | null;
-    users: { user_name: string; user_phone: string | null; user_email: string } | null;
+    users: { user_name: string; user_phone: string | null; user_email: string; user_avatar: string | null; user_id: string } | null;
 };
 
 export default async function RoomDetailPage({ params }: { params: Promise<{ post_id: string }> }) {
@@ -35,7 +36,7 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ pos
                     amenities:amenity_id ( amenity_name )
                 )
             ),
-            users:user_id ( user_name, user_phone, user_email )
+            users:user_id ( user_id, user_name, user_phone, user_email, user_avatar )
         `)
         .eq('post_id', post_id)
         .single();
@@ -62,7 +63,6 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ pos
             : room.room_price.toLocaleString('vi-VN') + ' đ'
         : '0';
 
-    // Get average rating
     const { data: reviewsData } = await supabase
         .from('reviews')
         .select('rating')
@@ -73,7 +73,13 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ pos
         : null;
 
     return (
+<<<<<<< HEAD
         <div className="max-w-7xl mx-auto p-4 md:p-10 space-y-10 animate-in fade-in duration-700">
+=======
+        <div className="min-h-screen bg-slate-50 text-slate-900">
+            <ViewTracker postId={post_id} />
+            <div className="mx-auto max-w-7xl space-y-10 px-4 py-6 md:px-10 md:py-10">
+>>>>>>> b2ba66bc35f45c1472b3ded61e3657e1a93f695c
             {/* HEADER */}
             <header className="space-y-4 border-b pb-8">
                 <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
@@ -96,6 +102,9 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ pos
                                     {avgRating} ({reviewsData?.length} đánh giá)
                                 </Badge>
                             )}
+                            <Badge variant="secondary" size="md" icon="👁️">
+                                {(post.view_count ?? 0).toLocaleString('vi-VN')} lượt xem
+                            </Badge>
                         </div>
 
                         <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight leading-tight">
@@ -187,11 +196,18 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ pos
 
                 {/* RIGHT COLUMN - Sidebar */}
                 <aside className="lg:col-span-4">
+<<<<<<< HEAD
                     <div className="sticky top-10 space-y-6">
                         {/* Contact Card */}
                         <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-[3rem] p-8 text-white shadow-2xl border-t-8 border-blue-400">
                             <div className="flex items-center gap-4 mb-8">
                                 <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center text-2xl shadow-lg">
+=======
+                    <div className="sticky top-10 space-y-6 rounded-[3rem] bg-transparent">
+                        <div className="rounded-[3rem] border border-blue-100 bg-gradient-to-br from-blue-500 to-cyan-500 p-8 text-white shadow-2xl transition-transform duration-[220ms] ease-[var(--ease-out-quart)] hover:-translate-y-0.5 hover:shadow-[0_24px_70px_rgba(59,130,246,0.24)]">
+                            <div className="mb-8 flex items-center gap-4">
+                                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 text-2xl shadow-lg backdrop-blur-sm">
+>>>>>>> b2ba66bc35f45c1472b3ded61e3657e1a93f695c
                                     👤
                                 </div>
                                 <div>
@@ -206,6 +222,9 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ pos
                                     ownerEmail={post.users?.user_email}
                                     ownerName={post.users?.user_name}
                                     roomTitle={post.post_title}
+                                    ownerId={post.users?.user_id}
+                                    postId={post.post_id}
+                                    roomId={post.room_id || undefined}
                                 />
                             </div>
 
@@ -218,9 +237,14 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ pos
                             </div>
                         </div>
 
+<<<<<<< HEAD
                         {/* Info Card */}
                         <div className="bg-white rounded-[2.5rem] p-6 border border-gray-100 shadow-sm">
                             <h5 className="font-black text-gray-800 mb-4 text-sm uppercase tracking-widest">Thông tin chi tiết</h5>
+=======
+                        <div className="rounded-[2.5rem] border border-app bg-surface p-6 shadow-sm transition-all duration-[180ms] ease-[var(--ease-out-quart)] hover:-translate-y-0.5 hover:shadow-md">
+                            <h5 className="mb-4 text-sm font-black uppercase tracking-widest text-slate-800">Thông tin chi tiết</h5>
+>>>>>>> b2ba66bc35f45c1472b3ded61e3657e1a93f695c
                             <div className="space-y-3">
                                 <div className="flex justify-between items-center py-2 border-b border-gray-50">
                                     <span className="text-gray-500 text-sm">Diện tích</span>
@@ -245,7 +269,6 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ pos
                             </div>
                         </div>
 
-                        {/* Amenities mini card */}
                         {amenities.length > 0 && (
                             <div className="bg-blue-50 rounded-[2.5rem] p-6 border border-blue-100">
                                 <h5 className="font-black text-blue-900 mb-4 text-xs uppercase tracking-widest text-center">
