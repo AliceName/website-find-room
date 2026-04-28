@@ -11,6 +11,8 @@ interface ModalProps {
   cancelText?: string;
   onConfirm?: () => void | Promise<void>;
   isLoading?: boolean;
+  confirmDisabled?: boolean;
+  containerClassName?: string;
   children?: React.ReactNode;
 }
 
@@ -24,6 +26,8 @@ export default function Modal({
   cancelText = "Hủy",
   onConfirm,
   isLoading = false,
+  confirmDisabled = false,
+  containerClassName = "max-w-md",
   children,
 }: ModalProps) {
   if (!isOpen) return null;
@@ -38,23 +42,23 @@ export default function Modal({
   const config = typeConfig[type];
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4">
+      <div className={`bg-white rounded-2xl shadow-2xl w-full p-5 sm:p-6 space-y-4 animate-in fade-in zoom-in-95 max-h-[92vh] overflow-y-auto ${containerClassName}`}>
         {/* Header */}
         {(title || type !== "info") && (
           <div className="flex items-start gap-3">
-            <span className="text-2xl">{config.icon}</span>
-            <div className="flex-1">
+            <span className="text-2xl shrink-0">{config.icon}</span>
+            <div className="flex-1 min-w-0">
               {title && (
-                <h2 className="text-lg font-bold text-gray-900">{title}</h2>
+                <h2 className="text-lg font-bold text-gray-900 leading-tight">{title}</h2>
               )}
               {description && (
-                <p className="text-sm text-gray-600 mt-1">{description}</p>
+                <p className="mt-1 text-sm text-gray-600 leading-relaxed">{description}</p>
               )}
             </div>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition"
+              className="shrink-0 text-gray-400 hover:text-gray-600 transition"
             >
               ✕
             </button>
@@ -82,6 +86,7 @@ export default function Modal({
                 size="md"
                 onClick={onConfirm}
                 isLoading={isLoading}
+                disabled={confirmDisabled}
                 className="flex-1"
               >
                 {confirmText}

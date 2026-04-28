@@ -80,6 +80,7 @@ function RoomsContent() {
                             room_price,
                             room_area,
                             room_status,
+                            is_hidden,
                             vr_url,
                             latitude,
                             longitude,
@@ -94,8 +95,9 @@ function RoomsContent() {
             ]);
 
             if (postsRes.data) {
-                setPosts(postsRes.data as unknown as PostWithDetails[]);
-                setFiltered(postsRes.data as unknown as PostWithDetails[]);
+                const visiblePosts = (postsRes.data as unknown as PostWithDetails[]).filter((post) => post.rooms?.is_hidden !== true);
+                setPosts(visiblePosts);
+                setFiltered(visiblePosts);
             }
             if (amenitiesRes.data) {
                 setAllAmenities(amenitiesRes.data);

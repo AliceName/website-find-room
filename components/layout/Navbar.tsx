@@ -136,6 +136,9 @@ export default function Navbar() {
                                 )}
                                 <NavLink href="/favorites" active={pathname === "/favorites"}>❤️ Đã lưu</NavLink>
                                 <NavLink href="/manage-posts" active={pathname === "/manage-posts"}>Quản lý</NavLink>
+                                {userRole === 'admin' && (
+                                    <NavLink href="/admin/reports" active={pathname?.startsWith("/admin/reports")}>🛡️ Report</NavLink>
+                                )}
                                 <NavLink href="/profile" active={pathname === "/profile"}>Hồ sơ</NavLink>
                                 <button
                                     onClick={handleSignOut}
@@ -206,6 +209,9 @@ export default function Navbar() {
                             )}
                             <MobileNavLink href="/favorites" active={pathname === "/favorites"} onClick={() => setMobileOpen(false)}>❤️ Tin đã lưu</MobileNavLink>
                             <MobileNavLink href="/manage-posts" active={pathname === "/manage-posts"} onClick={() => setMobileOpen(false)}>📋 Quản lý bài đăng</MobileNavLink>
+                            {userRole === 'admin' && (
+                                <MobileNavLink href="/admin/reports" active={pathname?.startsWith("/admin/reports")} onClick={() => setMobileOpen(false)}>🛡️ Report</MobileNavLink>
+                            )}
                             <MobileNavLink href="/profile" active={pathname === "/profile"} onClick={() => setMobileOpen(false)}>👤 Hồ sơ của tôi</MobileNavLink>
                             <button
                                 onClick={handleSignOut}

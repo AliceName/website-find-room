@@ -47,6 +47,7 @@ export default async function HomePage() {
                 room_price,
                 room_area,
                 room_status,
+                is_hidden,
                 vr_url,
                 room_types:room_type_id (
                     room_type_id,
@@ -69,7 +70,7 @@ export default async function HomePage() {
 
     if (error) console.error("Lỗi lấy dữ liệu:", error);
 
-    const posts = (data as unknown as any[] | null) ?? [];
+    const posts = ((data as unknown as any[] | null) ?? []).filter((post) => post.rooms?.is_hidden !== true);
 
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900">

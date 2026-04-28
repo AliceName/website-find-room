@@ -138,6 +138,7 @@ export default function ChatThread({ conversationId, currentUserId, initialMessa
           ) : (
             messageList.map((message) => {
               const isMine = message.sender_user_id === currentUserId;
+              const isSystem = message.message_type === "system";
               return (
                 <div
                   key={message.message_id}
@@ -145,13 +146,23 @@ export default function ChatThread({ conversationId, currentUserId, initialMessa
                 >
                   <div
                     className={`group max-w-[80%] rounded-[1.4rem] px-4 py-3 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md ${
-                      isMine
-                        ? "bg-gradient-to-br from-blue-600 to-blue-500 text-white"
-                        : "border border-slate-200 bg-slate-50 text-slate-900"
+                      isSystem
+                        ? "border border-amber-200 bg-amber-50 text-amber-900"
+                        : isMine
+                          ? "bg-gradient-to-br from-blue-600 to-blue-500 text-white"
+                          : "border border-slate-200 bg-slate-50 text-slate-900"
                     }`}
                   >
+                    <div className="mb-2 flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.16em]">
+                      {isSystem ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-amber-700">
+                          <span>⚙️</span>
+                          Thông báo hệ thống
+                        </span>
+                      ) : null}
+                    </div>
                     <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{message.message_content}</p>
-                    <div className={`mt-2 flex items-center justify-between gap-3 text-[11px] ${isMine ? "text-blue-100" : "text-slate-500"}`}>
+                    <div className={`mt-2 flex items-center justify-between gap-3 text-[11px] ${isMine ? "text-blue-100" : isSystem ? "text-amber-600" : "text-slate-500"}`}>
                       <span>{formatTime(message.created_at)}</span>
                       {isMine && (
                         <span className="rounded-full bg-white/15 px-2 py-0.5 font-semibold">

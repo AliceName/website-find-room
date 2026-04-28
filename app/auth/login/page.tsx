@@ -28,7 +28,7 @@ export default function LoginPage() {
         setError(null);
         setSuccess(null);
 
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data: signInData, error } = await supabase.auth.signInWithPassword({ email, password });
 
         if (error) {
             if (error.message.includes("Invalid login credentials")) {
@@ -40,6 +40,22 @@ export default function LoginPage() {
             }
             setLoading(false);
         } else {
+            const currentUser = signInData.user;
+            if (currentUser) {
+                const { data: profile } = await supabase
+                    .from("users")
+                    .select("is_banned, ban_reason, user_role")
+                    .eq("user_id", currentUser.id)
+                    .single();
+
+                if (profile?.is_banned) {
+                    await supabase.auth.signOut({ scope: "local" });
+                    setError(profile.ban_reason ? `Tài khoản của bạn đã bị khóa: ${profile.ban_reason}` : "Tài khoản của bạn đã bị khóa.");
+                    setLoading(false);
+                    return;
+                }
+            }
+
             setSuccess("Đăng nhập thành công! Đang chuyển hướng...");
             setLoading(false);
             setTimeout(() => {

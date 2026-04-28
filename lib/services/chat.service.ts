@@ -11,6 +11,7 @@ export type ConversationUserState = "hidden" | "deleted";
 
 export class ChatService {
   private static getExpiresAt(policy: RetentionPolicy): string | null {
+
     const now = new Date();
 
     if (policy === "3_days") return new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString();
@@ -25,19 +26,32 @@ export class ChatService {
     postId?: string | null;
     roomId?: string | null;
     retentionPolicy?: RetentionPolicy;
+    conversationType?: "direct" | "system";
   }): Promise<ConversationRow> {
-    const { renterId, ownerId, postId = null, roomId = null, retentionPolicy = "manual" } = input;
+    const {
+      renterId,
+      ownerId,
+      postId = null,
+      roomId = null,
+      retentionPolicy = "manual",
+      conversationType = "direct",
+    } = input;
 
     if (renterId === ownerId) {
       throw new Error("Bạn không thể nhắn tin với chính tài khoản của mình.");
     }
 
-    const { data: existing, error: existingError } = await supabase
+    let query = supabase
       .from("conversations")
       .select("*")
       .eq("renter_id", renterId)
-      .eq("owner_id", ownerId)
-      .maybeSingle();
+      .eq("owner_id", ownerId);
+
+    if (conversationType === "system") {
+      query = query.is("post_id", null).is("room_id", null);
+    }
+
+    const { data: existing, error: existingError } = await query.maybeSingle();
 
     if (existingError) {
       throw new Error(`Không thể kiểm tra cuộc trò chuyện: ${existingError.message}`);
@@ -45,11 +59,12 @@ export class ChatService {
 
     if (existing) {
       const expiresAt = existing.retention_policy === retentionPolicy ? existing.expires_at : this.getExpiresAt(retentionPolicy);
+      const shouldUpdateContext = conversationType !== "system";
       const { data: updated, error: updateError } = await supabase
         .from("conversations")
         .update({
-          post_id: postId ?? existing.post_id,
-          room_id: roomId ?? existing.room_id,
+          post_id: shouldUpdateContext ? (postId ?? existing.post_id) : existing.post_id,
+          room_id: shouldUpdateContext ? (roomId ?? existing.room_id) : existing.room_id,
           retention_policy: retentionPolicy,
           expires_at: expiresAt,
           updated_at: new Date().toISOString(),

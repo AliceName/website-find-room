@@ -10,6 +10,7 @@ export { default as EmptyState } from "./EmptyState";
 export { default as AreaRange } from "./AreaRange";
 export { default as SearchFilter } from "./SearchFilter";
 export { default as ContactButton } from "./ContactButton";
+export { default as ReportButton } from "./ReportButton";
 export { default as Pagination } from "./Pagination";
 export { default as Badge } from "./Badge";
 export { default as ImageUploader } from "./ImageUploader";
