@@ -7,6 +7,8 @@ import { uploadRoomImage } from "@/lib/services/storage.service";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import VietnamAddressSelect from "@/components/common/VietnamAddressSelect";
+import { Sparkles, ArrowLeft, Check } from "lucide-react";
+
 const PostLocationPicker = dynamic(
     () => import("@/components/map/PostLocationPicker"),
     { ssr: false }
@@ -25,9 +27,6 @@ const STEPS = [
     { id: 2, label: "Tiện ích & Mô tả" },
     { id: 3, label: "Hình ảnh & VR" },
 ];
-
-const inputCls =
-    "w-full rounded-2xl border border-amber-200/80 bg-white/90 px-4 py-3.5 text-sm font-medium text-slate-900 shadow-sm placeholder:text-slate-400 transition-all focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 focus:ring-offset-amber-50";
 
 const DEFAULT_AMENITIES = [
     { label: "Wifi", icon: "📶" },
@@ -62,43 +61,6 @@ interface AmenityOption {
     icon?: string;
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-    return (
-        <div>
-            <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">
-                {label}
-            </label>
-            {children}
-        </div>
-    );
-}
-
-function SummaryRow({ label, value }: { label: string; value: string }) {
-    return (
-        <div className="flex justify-between items-start gap-4">
-            <span className="text-xs font-bold text-gray-400 whitespace-nowrap">{label}</span>
-            <span className="text-xs font-bold text-gray-700 text-right line-clamp-2">{value || "—"}</span>
-        </div>
-    );
-}
-
-type PostUserRole = "owner" | "renter" | null;
-
-interface FormData {
-    post_title: string;
-    room_type: string;
-    room_price: string;
-    room_area: string;
-    city: string;
-    district: string;
-    ward: string;
-    address_detail: string;
-    selectedAmenityIds: string[];
-    room_description: string;
-    vr_url: string;
-    images: Array<{ file: File; is360: boolean }>;
-}
-
 export default function PostPage() {
     const router = useRouter();
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -109,11 +71,11 @@ export default function PostPage() {
     const [previews, setPreviews] = useState<string[]>([]);
     const [upload360Mode, setUpload360Mode] = useState(false);
     const [amenities, setAmenities] = useState<AmenityOption[]>([]);
-    const [userRole, setUserRole] = useState<PostUserRole>(null);
+    const [userRole, setUserRole] = useState<"owner" | "renter" | null>(null);
     const [latitude, setLatitude] = useState<number | null>(null);
     const [longitude, setLongitude] = useState<number | null>(null);
 
-    const [form, setForm] = useState<FormData>({
+    const [form, setForm] = useState({
         post_title: "",
         room_type: "phong_tro",
         room_price: "",
@@ -122,10 +84,10 @@ export default function PostPage() {
         district: "",
         ward: "",
         address_detail: "",
-        selectedAmenityIds: [],
+        selectedAmenityIds: [] as string[],
         room_description: "",
         vr_url: "",
-        images: [],
+        images: [] as Array<{ file: File; is360: boolean }>,
     });
 
     useEffect(() => {
@@ -139,101 +101,57 @@ export default function PostPage() {
                 .select("user_role")
                 .eq("user_id", user.id)
                 .single()
-                .then(({ data }) => {
-                    setUserRole(data?.user_role ?? null);
-                });
+                .then(({ data }) => setUserRole(data?.user_role ?? null));
         });
         loadAmenities();
     }, [router]);
 
     const loadAmenities = async () => {
-        const { data, error } = await supabase
+        const { data } = await supabase
             .from("amenities")
             .select("amenity_id, amenity_name")
             .order("amenity_name");
 
-        if (error) {
+        if (data && data.length > 0) {
+            setAmenities(data);
+        } else {
             setAmenities(DEFAULT_AMENITIES.map((a, i) => ({
                 amenity_id: `default_${i}`,
                 amenity_name: a.label,
                 icon: a.icon,
             })));
-            return;
         }
-
-        const existing = data ?? [];
-        const existingNameSet = new Set(existing.map((a) => a.amenity_name.trim().toLowerCase()));
-        const missingDefaults = DEFAULT_AMENITIES
-            .filter((a) => !existingNameSet.has(a.label.trim().toLowerCase()))
-            .map((a) => ({ amenity_name: a.label }));
-
-        if (missingDefaults.length > 0) {
-            await supabase.from("amenities").insert(missingDefaults);
-        }
-
-        const { data: finalData } = await supabase
-            .from("amenities")
-            .select("amenity_id, amenity_name")
-            .order("amenity_name");
-
-        const iconMap = new Map(DEFAULT_AMENITIES.map((a) => [a.label.trim().toLowerCase(), a.icon]));
-        const mapped = (finalData ?? existing).map((a) => ({
-            ...a,
-            icon: iconMap.get(a.amenity_name.trim().toLowerCase()) ?? "✨",
-        }));
-
-        setAmenities(mapped);
     };
 
-    const update = <K extends keyof FormData>(key: K, value: FormData[K]) =>
+    const update = (key: string, value: any) => {
         setForm(prev => ({ ...prev, [key]: value }));
-
-    const handleAddressChange = (city: string, district: string, ward: string) => {
-        setForm(prev => ({ ...prev, city, district, ward }));
-        setLatitude(null);
-        setLongitude(null);
     };
 
-    const handleLocationChange = (value: { latitude: number | null; longitude: number | null }) => {
-        setLatitude(value.latitude);
-        setLongitude(value.longitude);
-    };
-
-    const handleReverseGeocode = (data: {
-        city?: string;
-        district?: string;
-        ward?: string;
-        address_detail?: string;
-        full_address?: string;
-    }) => {
-        if (data.city) setForm(prev => ({ ...prev, city: data.city ?? prev.city }));
-        if (data.district) setForm(prev => ({ ...prev, district: data.district ?? prev.district }));
-        if (data.ward) setForm(prev => ({ ...prev, ward: data.ward ?? prev.ward }));
-        if (data.address_detail) {
-            setForm(prev => ({ ...prev, address_detail: data.address_detail ?? prev.address_detail }));
-        }
-    };
-
-    const toggleAmenity = (id: string) =>
+    const toggleAmenity = (id: string) => {
         setForm(prev => ({
             ...prev,
             selectedAmenityIds: prev.selectedAmenityIds.includes(id)
                 ? prev.selectedAmenityIds.filter(a => a !== id)
                 : [...prev.selectedAmenityIds, id],
         }));
+    };
 
     const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files ?? []);
         if (!files.length) return;
-        const mapped = files.map((file) => ({ file, is360: upload360Mode }));
+
+        const mapped = files.map(file => ({ file, is360: upload360Mode }));
         const newFiles = [...form.images, ...mapped].slice(0, 8);
+
         update("images", newFiles);
+        setPreviews(newFiles.map(img => URL.createObjectURL(img.file)));
         e.target.value = "";
     };
 
     const removeImage = (index: number) => {
         const newFiles = form.images.filter((_, i) => i !== index);
         update("images", newFiles);
+        setPreviews(prev => prev.filter((_, i) => i !== index));
     };
 
     const validateStep = (s: number): string | null => {
@@ -244,7 +162,7 @@ export default function PostPage() {
             if (!form.city.trim()) return "Vui lòng chọn tỉnh / thành phố.";
             if (!form.district.trim()) return "Vui lòng chọn quận / huyện.";
             if (!form.ward.trim()) return "Vui lòng chọn phường / xã.";
-            if (latitude === null || longitude === null) return "Vui lòng chọn vị trí trên mini map.";
+            if (latitude === null || longitude === null) return "Vui lòng chọn vị trí trên bản đồ.";
         }
         if (s === 2) {
             if (!form.room_description.trim()) return "Vui lòng nhập mô tả căn phòng.";
@@ -260,7 +178,10 @@ export default function PostPage() {
         window.scrollTo({ top: 0, behavior: "smooth" });
     };
 
-    const prevStep = () => { setError(null); setStep(s => Math.max(s - 1, 1)); };
+    const prevStep = () => {
+        setError(null);
+        setStep(s => Math.max(s - 1, 1));
+    };
 
     const handleSubmit = async () => {
         setLoading(true);
@@ -311,14 +232,8 @@ export default function PostPage() {
             }
 
             if (form.images.length > 0) {
-                const uploadErrors: string[] = [];
                 for (const image of form.images) {
-                    const result = await uploadRoomImage(image.file, roomData.room_id, image.is360);
-                    if (result.error) uploadErrors.push(result.error);
-                }
-                if (uploadErrors.length > 0) {
-                    setError("Lỗi upload ảnh: " + uploadErrors.join("; "));
-                    return;
+                    await uploadRoomImage(image.file, roomData.room_id, image.is360);
                 }
             }
 
@@ -329,8 +244,8 @@ export default function PostPage() {
             if (postErr) throw new Error("Lỗi tạo bài đăng: " + postErr.message);
 
             router.push(`/rooms/${postData.post_id}`);
-        } catch (e: unknown) {
-            setError("Đăng tin thất bại: " + (e instanceof Error ? e.message : "Lỗi không xác định"));
+        } catch (e: any) {
+            setError("Đăng tin thất bại: " + (e.message || "Lỗi không xác định"));
         } finally {
             setLoading(false);
         }
@@ -338,14 +253,14 @@ export default function PostPage() {
 
     if (userRole === "renter") {
         return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 text-slate-900">
-                <div className="max-w-md rounded-3xl border border-amber-200/80 bg-gradient-to-b from-white to-amber-50 p-12 text-center shadow-[0_25px_90px_rgba(120,53,15,0.12)]">
+            <div className="min-h-screen bg-[#F0F9FF] flex items-center justify-center px-4">
+                <div className="max-w-md rounded-3xl border border-sky-100 bg-white p-12 text-center shadow-xl">
                     <span className="text-6xl">🔑</span>
-                    <h2 className="mt-4 mb-2 text-2xl font-black text-slate-950">Bạn đang ở vai trò người thuê</h2>
-                    <p className="mb-6 text-slate-600">Chỉ chủ trọ mới có thể đăng tin. Hãy cập nhật vai trò trong hồ sơ nếu đây là tài khoản của bạn.</p>
-                    <div className="flex justify-center gap-3">
-                        <Link href="/profile" className="rounded-2xl bg-gradient-to-r from-amber-600 to-orange-600 px-6 py-3 font-bold text-white transition-all hover:-translate-y-0.5 hover:from-amber-700 hover:to-orange-700">Cập nhật hồ sơ</Link>
-                        <Link href="/" className="rounded-2xl border border-amber-200 bg-white px-6 py-3 font-bold text-amber-700 transition-all hover:-translate-y-0.5 hover:bg-amber-50">Về trang chủ</Link>
+                    <h2 className="mt-6 text-2xl font-black text-slate-900">Bạn đang ở vai trò người thuê</h2>
+                    <p className="mt-3 text-slate-600">Chỉ chủ trọ mới có thể đăng tin cho thuê.</p>
+                    <div className="mt-8 flex justify-center gap-4">
+                        <Link href="/profile" className="rounded-2xl bg-[#0EA5E9] px-6 py-3 font-bold text-white hover:bg-[#0284C8]">Cập nhật hồ sơ</Link>
+                        <Link href="/" className="rounded-2xl border border-slate-300 px-6 py-3 font-bold text-slate-700 hover:bg-slate-50">Về trang chủ</Link>
                     </div>
                 </div>
             </div>
@@ -356,107 +271,137 @@ export default function PostPage() {
     const images360 = form.images.filter((image) => image.is360);
 
     return (
-        <div className="min-h-screen bg-slate-50 py-10 px-4 text-slate-900">
-            <div className="mx-auto max-w-2xl">
+        <div className="relative min-h-screen bg-[#F0F9FF] text-slate-800 overflow-hidden">
+            {/* Background */}
+            <div className="fixed inset-0 -z-10">
+                <div
+                    className="absolute inset-0 opacity-40"
+                    style={{
+                        backgroundImage: "linear-gradient(to right, #bae6fd 1px, transparent 1px), linear-gradient(to bottom, #bae6fd 1px, transparent 1px)",
+                        backgroundSize: "40px 40px",
+                    }}
+                />
+                <div className="absolute left-[-200px] top-[-150px] h-[550px] w-[550px] rounded-full bg-[#7DD3FC]/50 blur-[120px]" />
+                <div className="absolute bottom-[-180px] right-[-180px] h-[500px] w-[500px] rounded-full bg-[#0EA5E9]/30 blur-[130px]" />
+            </div>
+
+            <div className="mx-auto max-w-2xl px-4 py-10">
                 <div className="mb-8">
-                    <Link href="/" className="text-sm font-medium text-amber-600 transition hover:text-amber-700">← Về trang chủ</Link>
-                    <h1 className="mt-3 text-3xl font-black tracking-tight text-slate-950 md:text-4xl">Đăng tin cho thuê</h1>
-                    <p className="mt-1 font-medium text-slate-600">Điền đủ thông tin để người thuê nhìn thấy căn phòng rõ ràng hơn.</p>
+                    <Link href="/" className="flex items-center gap-2 text-sky-600 hover:text-[#0EA5E9] font-medium">
+                        <ArrowLeft className="h-4 w-4" /> Về trang chủ
+                    </Link>
+                    <h1 className="mt-4 text-4xl font-black tracking-tight text-slate-900">Đăng tin cho thuê</h1>
+                    <p className="mt-2 text-slate-600">Hãy tạo tin đăng chuyên nghiệp để thu hút người thuê.</p>
                 </div>
 
-                <div className="mb-8 flex items-center gap-2">
+                {/* Steps */}
+                <div className="mb-10 flex items-center gap-3">
                     {STEPS.map((s, i) => (
-                        <div key={s.id} className="flex items-center gap-2 flex-1">
-                            <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-black transition-all ${step > s.id ? "bg-emerald-500 text-white" :
-                                step === s.id ? "bg-amber-600 text-white shadow-lg shadow-amber-200" :
-                                    "bg-amber-100 text-amber-400"
-                                }`}>
-                                {step > s.id ? "✓" : s.id}
+                        <div key={s.id} className="flex flex-1 items-center gap-3">
+                            <div className={`flex h-10 w-10 items-center justify-center rounded-2xl text-lg font-black transition-all ${
+                                step > s.id ? "bg-emerald-500 text-white" :
+                                step === s.id ? "bg-gradient-to-br from-[#0EA5E9] to-[#7DD3FC] text-white shadow-lg" :
+                                "bg-white border-2 border-slate-200 text-slate-400"
+                            }`}>
+                                {step > s.id ? <Check className="h-5 w-5" /> : s.id}
                             </div>
-                            <span className={`text-xs font-bold hidden sm:block truncate ${step === s.id ? "text-amber-700" : "text-slate-400"}`}>
-                                {s.label}
-                            </span>
-                            {i < STEPS.length - 1 && (
-                                <div className={`h-0.5 flex-1 mx-1 rounded-full ${step > s.id ? "bg-emerald-400" : "bg-amber-100"}`} />
-                            )}
+                            <span className={`font-semibold ${step === s.id ? "text-slate-900" : "text-slate-500"}`}>{s.label}</span>
+                            {i < STEPS.length - 1 && <div className={`h-0.5 flex-1 ${step > s.id ? "bg-emerald-500" : "bg-slate-200"}`} />}
                         </div>
                     ))}
                 </div>
 
                 {error && (
-                    <div className="mb-6 flex items-start gap-3 rounded-2xl border border-rose-100 bg-rose-50 p-4">
-                        <span className="shrink-0 text-lg text-rose-500">⚠️</span>
-                        <p className="text-sm font-medium text-rose-700">{error}</p>
+                    <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-5 text-red-700">
+                        {error}
                     </div>
                 )}
 
-                <div className="space-y-8 rounded-[2.5rem] border border-amber-100 bg-gradient-to-b from-white to-amber-50/40 p-8 shadow-[0_25px_90px_rgba(120,53,15,0.08)] md:p-10">
+                <div className="rounded-[32px] border border-sky-100 bg-white shadow-2xl p-8 md:p-10">
+                    {/* STEP 1 */}
                     {step === 1 && (
-                        <div className="space-y-6">
-                            <h2 className="text-xl font-black text-slate-900">📋 Thông tin cơ bản</h2>
+                        <div className="space-y-8">
+                            <h2 className="text-2xl font-black text-slate-900">📋 Thông tin cơ bản</h2>
 
-                            <Field label="Tiêu đề bài đăng *">
-                                <input type="text" value={form.post_title} maxLength={120}
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Tiêu đề bài đăng *</label>
+                                <input
+                                    type="text"
+                                    value={form.post_title}
                                     onChange={e => update("post_title", e.target.value)}
-                                    placeholder="VD: Phòng trọ cao cấp gần HUTECH, đầy đủ nội thất..."
-                                    className={inputCls} />
-                                <p className="text-xs text-gray-400 mt-1 text-right">{form.post_title.length}/120</p>
-                            </Field>
+                                    placeholder="VD: Phòng trọ cao cấp gần HUTECH..."
+                                    className="w-full rounded-2xl border border-sky-200 bg-white px-5 py-4 focus:border-[#0EA5E9] focus:ring-4 focus:ring-sky-100 outline-none"
+                                />
+                            </div>
 
-                            <Field label="Loại hình cho thuê *">
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-3">Loại phòng *</label>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                     {ROOM_TYPES.map(t => (
-                                        <button key={t.value} type="button" onClick={() => update("room_type", t.value)}
-                                            className={`p-3 rounded-2xl border-2 text-sm font-bold transition-all ${form.room_type === t.value
-                                                ? "border-blue-600 bg-blue-50 text-blue-700"
-                                                : "border-gray-200 text-gray-600 hover:border-gray-300"
-                                                }`}>
+                                        <button
+                                            key={t.value}
+                                            type="button"
+                                            onClick={() => update("room_type", t.value)}
+                                            className={`p-4 rounded-2xl border-2 font-medium transition-all ${
+                                                form.room_type === t.value
+                                                    ? "border-[#0EA5E9] bg-sky-50 text-[#0EA5E9]"
+                                                    : "border-slate-200 hover:border-slate-300"
+                                            }`}
+                                        >
                                             {t.label}
                                         </button>
                                     ))}
                                 </div>
-                            </Field>
+                            </div>
 
                             <div className="grid grid-cols-2 gap-4">
-                                <Field label="Giá thuê / tháng (đ) *">
-                                    <div className="relative">
-                                        <input type="number" value={form.room_price} min={0}
-                                            onChange={e => update("room_price", e.target.value)}
-                                            placeholder="3000000" className={inputCls + " pr-10"} />
-                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">đ</span>
-                                    </div>
-                                    {form.room_price && Number(form.room_price) > 0 && (
-                                        <p className="mt-1 text-xs font-bold text-amber-700">
-                                            ≈ {Number(form.room_price).toLocaleString("vi-VN")} đ
-                                        </p>
-                                    )}
-                                </Field>
-                                <Field label="Diện tích (m²) *">
-                                    <div className="relative">
-                                        <input type="number" value={form.room_area} min={0}
-                                            onChange={e => update("room_area", e.target.value)}
-                                            placeholder="25" className={inputCls + " pr-12"} />
-                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">m²</span>
-                                    </div>
-                                </Field>
+                                <div>
+                                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Giá thuê (đ/tháng) *</label>
+                                    <input
+                                        type="number"
+                                        value={form.room_price}
+                                        onChange={e => update("room_price", e.target.value)}
+                                        placeholder="3000000"
+                                        className="w-full rounded-2xl border border-sky-200 bg-white px-5 py-4 focus:border-[#0EA5E9] focus:ring-4 focus:ring-sky-100 outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Diện tích (m²) *</label>
+                                    <input
+                                        type="number"
+                                        value={form.room_area}
+                                        onChange={e => update("room_area", e.target.value)}
+                                        placeholder="25"
+                                        className="w-full rounded-2xl border border-sky-200 bg-white px-5 py-4 focus:border-[#0EA5E9] focus:ring-4 focus:ring-sky-100 outline-none"
+                                    />
+                                </div>
                             </div>
 
                             <div>
-                                <h3 className="text-base font-black text-gray-900 mb-4">📍 Địa chỉ</h3>
+                                <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-3">📍 Địa chỉ</label>
                                 <VietnamAddressSelect
                                     city={form.city}
                                     district={form.district}
                                     ward={form.ward}
-                                    onAddressChange={handleAddressChange}
+                                    onAddressChange={(city, district, ward) => {
+                                        update("city", city);
+                                        update("district", district);
+                                        update("ward", ward);
+                                    }}
                                     required
                                 />
                             </div>
 
-                            <Field label="Số nhà / Tên đường">
-                                <input type="text" value={form.address_detail}
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Số nhà / Tên đường</label>
+                                <input
+                                    type="text"
+                                    value={form.address_detail}
                                     onChange={e => update("address_detail", e.target.value)}
-                                    placeholder="VD: 123 Đường Hà Huy Giáp" className={inputCls} />
-                            </Field>
+                                    placeholder="VD: 123 Đường Hà Huy Giáp"
+                                    className="w-full rounded-2xl border border-sky-200 bg-white px-5 py-4 focus:border-[#0EA5E9] focus:ring-4 focus:ring-sky-100 outline-none"
+                                />
+                            </div>
 
                             <PostLocationPicker
                                 addressDetail={form.address_detail}
@@ -465,141 +410,141 @@ export default function PostPage() {
                                 ward={form.ward}
                                 latitude={latitude}
                                 longitude={longitude}
-                                onChange={handleLocationChange}
-                                onReverseGeocode={handleReverseGeocode}
+                                onChange={(val) => {
+                                    setLatitude(val.latitude);
+                                    setLongitude(val.longitude);
+                                }}
+                                onReverseGeocode={() => {}}
                             />
                         </div>
                     )}
 
+                    {/* STEP 2 */}
                     {step === 2 && (
-                        <div className="space-y-6">
-                            <h2 className="text-xl font-black text-gray-900">✨ Tiện ích phòng</h2>
+                        <div className="space-y-8">
+                            <h2 className="text-2xl font-black text-slate-900">✨ Tiện ích phòng</h2>
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                 {amenities.map(a => {
                                     const selected = form.selectedAmenityIds.includes(a.amenity_id);
                                     return (
-                                        <button key={a.amenity_id} type="button" onClick={() => toggleAmenity(a.amenity_id)}
-                                            className={`flex items-center gap-2.5 p-3.5 rounded-2xl border-2 text-sm font-bold transition-all text-left ${selected ? "border-blue-600 bg-blue-50 text-blue-700" : "border-gray-200 text-gray-600 hover:border-gray-300"
-                                                }`}>
-                                            <span className="text-lg">{a.icon}</span>
-                                            <span className="truncate">{a.amenity_name}</span>
-                                            {selected && <span className="ml-auto text-blue-600 text-xs">✓</span>}
+                                        <button
+                                            key={a.amenity_id}
+                                            type="button"
+                                            onClick={() => toggleAmenity(a.amenity_id)}
+                                            className={`flex items-center gap-3 p-4 rounded-2xl border-2 text-left transition-all ${
+                                                selected ? "border-[#0EA5E9] bg-sky-50 text-[#0EA5E9]" : "border-slate-200 hover:border-slate-300"
+                                            }`}
+                                        >
+                                            <span className="text-xl">{a.icon}</span>
+                                            <span>{a.amenity_name}</span>
+                                            {selected && <span className="ml-auto">✓</span>}
                                         </button>
                                     );
                                 })}
                             </div>
-                            {form.selectedAmenityIds.length > 0 && (
-                                <p className="text-xs text-blue-600 font-bold">Đã chọn {form.selectedAmenityIds.length} tiện ích</p>
-                            )}
 
-                            <h3 className="text-base font-black text-gray-900 pt-2">📝 Mô tả căn phòng *</h3>
-                            <textarea value={form.room_description} rows={6} maxLength={2000}
-                                onChange={e => update("room_description", e.target.value)}
-                                placeholder={"Mô tả chi tiết...\nVD: Phòng rộng 25m², thoáng mát, đầy đủ nội thất..."}
-                                className={inputCls + " resize-none leading-relaxed"} />
-                            <p className="text-xs text-gray-400 text-right">{form.room_description.length}/2000</p>
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Mô tả căn phòng *</label>
+                                <textarea
+                                    value={form.room_description}
+                                    rows={7}
+                                    onChange={e => update("room_description", e.target.value)}
+                                    placeholder="Mô tả chi tiết căn phòng..."
+                                    className="w-full rounded-2xl border border-sky-200 bg-white px-5 py-4 focus:border-[#0EA5E9] focus:ring-4 focus:ring-sky-100 outline-none resize-y"
+                                />
+                            </div>
                         </div>
                     )}
 
+                    {/* STEP 3 */}
                     {step === 3 && (
-                        <div className="space-y-6">
-                            <h2 className="text-xl font-black text-gray-900">📸 Hình ảnh phòng</h2>
-                            <p className="text-sm text-gray-500 -mt-4">Tối đa 8 ảnh. Ảnh đầu tiên là ảnh bìa.</p>
+                        <div className="space-y-8">
+                            <h2 className="text-2xl font-black text-slate-900">📸 Hình ảnh & VR</h2>
 
-                            <div className="flex gap-2 bg-gray-100 p-1 rounded-xl">
+                            <div className="flex gap-2 bg-slate-100 p-1 rounded-2xl">
                                 <button
                                     type="button"
                                     onClick={() => setUpload360Mode(false)}
-                                    className={`flex-1 px-4 py-2.5 rounded-lg font-bold text-sm transition-all ${!upload360Mode
-                                        ? "bg-white text-blue-600 shadow-md"
-                                        : "text-gray-600 hover:text-gray-700"
-                                        }`}
+                                    className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all ${!upload360Mode ? "bg-white shadow text-[#0EA5E9]" : "text-slate-500"}`}
                                 >
-                                    📸 Ảnh thường ({normalImages.length})
+                                    Ảnh thường ({normalImages.length})
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setUpload360Mode(true)}
-                                    className={`flex-1 px-4 py-2.5 rounded-lg font-bold text-sm transition-all ${upload360Mode
-                                        ? "bg-white text-blue-600 shadow-md"
-                                        : "text-gray-600 hover:text-gray-700"
-                                        }`}
+                                    className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all ${upload360Mode ? "bg-white shadow text-[#0EA5E9]" : "text-slate-500"}`}
                                 >
-                                    🌐 Ảnh 360° ({images360.length})
+                                    Ảnh 360° ({images360.length})
                                 </button>
                             </div>
 
-                            <div onClick={() => fileInputRef.current?.click()}
-                                className={`border-2 border-dashed rounded-3xl p-8 text-center cursor-pointer transition-all ${upload360Mode
-                                    ? "border-purple-300 bg-purple-50/50 hover:bg-purple-50"
-                                    : "border-blue-300 bg-blue-50/50 hover:bg-blue-50"
-                                    }`}>
-                                <p className="text-4xl mb-3">{upload360Mode ? "🌐" : "🖼️"}</p>
-                                <p className={`font-bold ${upload360Mode ? "text-purple-700" : "text-blue-700"}`}>
-                                    Nhấp để chọn ảnh {upload360Mode ? "360°" : "thường"}
-                                </p>
-                                <p className="text-xs text-gray-400 mt-1">PNG, JPG, WEBP — tối đa 8 ảnh</p>
+                            <div
+                                onClick={() => fileInputRef.current?.click()}
+                                className="border-2 border-dashed border-sky-200 rounded-3xl p-12 text-center cursor-pointer hover:border-[#0EA5E9] transition-all bg-white"
+                            >
+                                <div className="text-4xl mb-4">📸</div>
+                                <p className="font-bold text-slate-700">Nhấp để tải ảnh lên</p>
+                                <p className="text-sm text-slate-500">Tối đa 8 ảnh</p>
                                 <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImageSelect} />
                             </div>
 
                             {form.images.length > 0 && (
                                 <div className="grid grid-cols-4 gap-3">
                                     {form.images.map((image, i) => (
-                                        <div key={i} className="relative aspect-square rounded-2xl overflow-hidden border-2 border-gray-100 group">
-                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <div key={i} className="relative aspect-square rounded-2xl overflow-hidden border border-sky-200 group">
                                             <img src={previews[i]} alt="" className="w-full h-full object-cover" />
-                                            {i === 0 && <span className="absolute top-1 left-1 bg-blue-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-lg">BÌA</span>}
-                                            {image.is360 && <span className="absolute bottom-1 left-1 bg-purple-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-lg">360°</span>}
-                                            <button type="button" onClick={() => removeImage(i)}
-                                                className="absolute top-1 right-1 bg-red-500 text-white w-5 h-5 rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">×</button>
+                                            {image.is360 && <span className="absolute bottom-2 left-2 bg-purple-600 text-xs px-2 py-1 rounded text-white">360°</span>}
+                                            <button
+                                                onClick={() => removeImage(i)}
+                                                className="absolute top-2 right-2 bg-red-500 text-white w-6 h-6 rounded-full opacity-0 group-hover:opacity-100 transition"
+                                            >
+                                                ×
+                                            </button>
                                         </div>
                                     ))}
                                 </div>
                             )}
 
-                            <h3 className="text-base font-black text-gray-900 pt-2">🥽 Tour VR 360° (tuỳ chọn)</h3>
-                            <Field label="Đường link VR / ảnh 360°">
-                                <input type="url" value={form.vr_url} onChange={e => update("vr_url", e.target.value)}
-                                    placeholder="https://..." className={inputCls} />
-                                <p className="text-xs text-gray-500 mt-2">✓ Hỗ trợ: Google Maps Embed, Matterport, YouTube 360°</p>
-                            </Field>
-
-                            <div className="bg-gray-50 rounded-3xl p-6 border border-gray-100 space-y-3">
-                                <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Xem lại trước khi đăng</p>
-                                <SummaryRow label="Tiêu đề" value={form.post_title} />
-                                <SummaryRow label="Loại phòng" value={ROOM_TYPES.find(t => t.value === form.room_type)?.label ?? ""} />
-                                <SummaryRow label="Giá thuê" value={Number(form.room_price).toLocaleString("vi-VN") + " đ/tháng"} />
-                                <SummaryRow label="Diện tích" value={form.room_area + " m²"} />
-                                <SummaryRow label="Địa chỉ" value={[form.address_detail, form.ward, form.district, form.city].filter(Boolean).join(", ")} />
-                                <SummaryRow label="Tiện ích" value={
-                                    form.selectedAmenityIds.length > 0
-                                        ? form.selectedAmenityIds.map(id => amenities.find(a => a.amenity_id === id)?.amenity_name ?? "").filter(Boolean).join(", ")
-                                        : "Chưa chọn"
-                                } />
-                                <SummaryRow label="Số ảnh" value={`${form.images.length} ảnh (${images360.length} ảnh 360°)`} />
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Link VR 360° (tùy chọn)</label>
+                                <input
+                                    type="url"
+                                    value={form.vr_url}
+                                    onChange={e => update("vr_url", e.target.value)}
+                                    placeholder="https://..."
+                                    className="w-full rounded-2xl border border-sky-200 bg-white px-5 py-4 focus:border-[#0EA5E9] focus:ring-4 focus:ring-sky-100 outline-none"
+                                />
                             </div>
                         </div>
                     )}
 
-                    <div className="flex gap-3 pt-2">
+                    {/* Navigation Buttons */}
+                    <div className="flex gap-3 pt-10">
                         {step > 1 && (
-                            <button type="button" onClick={prevStep}
-                                className="flex-1 py-4 rounded-2xl border-2 border-gray-200 text-gray-600 font-black text-sm hover:border-gray-300 transition-all">
+                            <button
+                                type="button"
+                                onClick={prevStep}
+                                className="flex-1 py-4 rounded-2xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50 transition-all"
+                            >
                                 ← Quay lại
                             </button>
                         )}
                         {step < 3 ? (
-                            <button type="button" onClick={nextStep}
-                                className="flex-1 py-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-sm transition-all shadow-lg shadow-blue-200 active:scale-95">
+                            <button
+                                type="button"
+                                onClick={nextStep}
+                                className="flex-1 py-4 rounded-2xl bg-gradient-to-r from-[#0EA5E9] to-[#7DD3FC] font-black text-white hover:brightness-105 shadow-lg shadow-sky-300"
+                            >
                                 Tiếp theo →
                             </button>
                         ) : (
-                            <button type="button" onClick={handleSubmit} disabled={loading}
-                                className="flex-1 py-4 rounded-2xl bg-gray-900 hover:bg-gray-800 disabled:bg-gray-400 text-white font-black text-sm transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2">
-                                {loading
-                                    ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />Đang đăng tin...</>
-                                    : "🚀 ĐĂNG TIN NGAY"
-                                }
+                            <button
+                                type="button"
+                                onClick={handleSubmit}
+                                disabled={loading}
+                                className="flex-1 py-4 rounded-2xl bg-gradient-to-r from-[#0EA5E9] to-[#7DD3FC] font-black text-white hover:brightness-105 shadow-lg shadow-sky-300 disabled:opacity-70"
+                            >
+                                {loading ? "Đang đăng tin..." : "🚀 ĐĂNG TIN NGAY"}
                             </button>
                         )}
                     </div>
