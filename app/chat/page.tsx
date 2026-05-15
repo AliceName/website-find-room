@@ -34,38 +34,61 @@ export default function ChatInboxPage() {
   }, []);
 
   if (loading) {
-    return <div className="min-h-screen bg-slate-50 px-4 py-8 text-slate-900 md:px-8">Đang tải inbox...</div>;
+    return (
+      <div className="min-h-screen bg-[#F0F9FF] flex items-center justify-center">
+        <div className="text-slate-500">Đang tải hộp thư...</div>
+      </div>
+    );
   }
 
   if (!userId) {
     return (
-      <div className="min-h-screen bg-slate-50 px-4 py-8 text-slate-900 md:px-8">
-        <div className="mx-auto max-w-6xl rounded-[2rem] border border-slate-200 bg-white p-8 shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
-          <p className="text-lg font-bold text-slate-900">Bạn cần đăng nhập để xem inbox.</p>
+      <div className="min-h-screen bg-[#F0F9FF] flex items-center justify-center px-4">
+        <div className="mx-auto max-w-md rounded-3xl border border-sky-100 bg-white p-10 text-center shadow-xl">
+          <p className="text-lg font-bold text-slate-900">Bạn cần đăng nhập để xem hộp thư.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.08),_transparent_24%),linear-gradient(180deg,#f8fafc_0%,#f8fafc_100%)] px-4 py-6 text-slate-900 md:px-8 md:py-8">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <header className="overflow-hidden rounded-[2rem] border border-slate-200/70 bg-white shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
-          <div className="flex flex-col gap-4 border-b border-slate-100 p-6 md:flex-row md:items-end md:justify-between">
+    <div className="relative min-h-screen bg-[#F0F9FF] text-slate-800 overflow-hidden">
+      {/* Background Pattern + Glows */}
+      <div className="fixed inset-0 -z-10">
+        {/* Grid Pattern */}
+        <div
+          className="absolute inset-0 opacity-40"
+          style={{
+            backgroundImage:
+              "linear-gradient(to right, #bae6fd 1px, transparent 1px), linear-gradient(to bottom, #bae6fd 1px, transparent 1px)",
+            backgroundSize: "40px 40px",
+          }}
+        />
+        {/* Soft Glow Orbs */}
+        <div className="absolute left-[-180px] top-[-120px] h-[520px] w-[520px] rounded-full bg-[#7DD3FC]/50 blur-[120px]" />
+        <div className="absolute bottom-[-180px] right-[-160px] h-[480px] w-[480px] rounded-full bg-[#0EA5E9]/30 blur-[130px]" />
+      </div>
+
+      <div className="relative z-10 mx-auto max-w-6xl px-4 py-8 md:px-6 md:py-10">
+        <header className="mb-8 overflow-hidden rounded-[28px] border border-sky-100 bg-white p-8 shadow-xl md:p-10">
+          <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <div>
-              <p className="text-[11px] font-black uppercase tracking-[0.28em] text-slate-400">Trung tâm nhắn tin</p>
-              <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950 md:text-4xl">Hộp thư</h1>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+              <div className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-xs font-bold uppercase tracking-[0.28em] text-[#0EA5E9]">
+                💬 TRUNG TÂM NHẮN TIN
+              </div>
+              <h1 className="mt-4 text-4xl font-black tracking-tight text-slate-900">Hộp thư</h1>
+              <p className="mt-3 max-w-2xl text-slate-600">
                 {userRole === "owner"
-                  ? "Danh sách cuộc trò chuyện giữa bạn và người thuê, gồm cả mục đã lưu trữ và trạng thái tự xóa."
-                  : "Danh sách cuộc trò chuyện giữa bạn và chủ nhà, gồm cả mục đã lưu trữ và trạng thái tự xóa."}
+                  ? "Quản lý tin nhắn với người thuê phòng của bạn."
+                  : "Quản lý tin nhắn với chủ nhà / chủ trọ."}
               </p>
             </div>
-            <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-              <div className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+
+            <div className="flex items-center gap-3 rounded-2xl border border-sky-100 bg-sky-50 px-5 py-3">
+              <div className="h-3 w-3 rounded-full bg-[#0EA5E9] animate-pulse" />
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Trạng thái</p>
-                <p className="text-sm font-semibold text-slate-900">Đang hoạt động</p>
+                <p className="text-sm font-semibold text-[#0EA5E9]">Đang hoạt động</p>
               </div>
             </div>
           </div>
