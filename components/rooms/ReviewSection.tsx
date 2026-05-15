@@ -8,6 +8,9 @@ interface Review {
     rating: number | null;
     comment: string | null;
     review_created_at: string | null;
+    owner_reply: string | null;
+    owner_reply_at: string | null;
+    owner_reply_user_id: string | null;
     users: { user_name: string } | null;
 }
 
@@ -20,6 +23,9 @@ export default function ReviewSection({ roomId }: ReviewSectionProps) {
     const [loading, setLoading] = useState(true);
     const [user, setUser] = useState<any>(null);
     const [userReview, setUserReview] = useState<Review | null>(null);
+    const [isOwner, setIsOwner] = useState(false);
+    const [replyDraftByReviewId, setReplyDraftByReviewId] = useState<Record<string, string>>({});
+    const [replySubmittingId, setReplySubmittingId] = useState<string | null>(null);
 
     // Form
     const [rating, setRating] = useState(5);
@@ -31,8 +37,18 @@ export default function ReviewSection({ roomId }: ReviewSectionProps) {
 
     useEffect(() => {
         fetchReviews();
-        supabase.auth.getUser().then(({ data: { user } }) => {
+        supabase.auth.getUser().then(async ({ data: { user } }) => {
             setUser(user);
+            if (!user) {
+                setIsOwner(false);
+                return;
+            }
+            const { data: roomData } = await supabase
+                .from("rooms")
+                .select("owner_id")
+                .eq("room_id", roomId)
+                .maybeSingle();
+            setIsOwner(Boolean(roomData?.owner_id && roomData.owner_id === user.id));
         });
     }, [roomId]);
 
@@ -41,7 +57,7 @@ export default function ReviewSection({ roomId }: ReviewSectionProps) {
         const { data } = await supabase
             .from("reviews")
             .select(`
-                review_id, rating, comment, review_created_at,
+                review_id, rating, comment, review_created_at, owner_reply, owner_reply_at, owner_reply_user_id,
                 users:user_id ( user_name )
             `)
             .eq("room_id", roomId)
@@ -130,6 +146,38 @@ export default function ReviewSection({ roomId }: ReviewSectionProps) {
         setRating(5);
         setComment("");
         fetchReviews();
+    };
+
+    const handleOwnerReply = async (reviewId: string) => {
+        if (!user || !isOwner) return;
+        const reply = (replyDraftByReviewId[reviewId] || "").trim();
+        if (!reply) {
+            setError("Vui lòng nhập nội dung phản hồi.");
+            return;
+        }
+
+        try {
+            setReplySubmittingId(reviewId);
+            setError(null);
+            const { error: updateError } = await supabase
+                .from("reviews")
+                .update({
+                    owner_reply: reply,
+                    owner_reply_at: new Date().toISOString(),
+                    owner_reply_user_id: user.id,
+                })
+                .eq("review_id", reviewId);
+
+            if (updateError) throw updateError;
+
+            setSuccess("Phản hồi đánh giá thành công.");
+            setReplyDraftByReviewId((current) => ({ ...current, [reviewId]: "" }));
+            await fetchReviews();
+        } catch (err: any) {
+            setError(err.message || "Không thể gửi phản hồi.");
+        } finally {
+            setReplySubmittingId(null);
+        }
     };
 
     const renderStars = (val: number, interactive = false) => {
@@ -308,6 +356,42 @@ export default function ReviewSection({ roomId }: ReviewSectionProps) {
                                 </div>
                                 {review.comment && (
                                     <p className="text-sm leading-relaxed text-gray-600">{review.comment}</p>
+                                )}
+
+                                {review.owner_reply && (
+                                    <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50 p-3">
+                                        <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Phản hồi từ chủ bài đăng</p>
+                                        <p className="mt-1 text-sm leading-relaxed text-blue-900">{review.owner_reply}</p>
+                                        {review.owner_reply_at && (
+                                            <p className="mt-1 text-[11px] text-blue-600">{new Date(review.owner_reply_at).toLocaleString("vi-VN")}</p>
+                                        )}
+                                    </div>
+                                )}
+
+                                {isOwner && (!review.owner_reply || review.owner_reply_user_id === user?.id) && (
+                                    <div className="mt-3 space-y-2 rounded-xl border border-slate-200 bg-white p-3">
+                                        <p className="text-xs font-bold uppercase tracking-wide text-slate-600">Phản hồi đánh giá</p>
+                                        <textarea
+                                            value={replyDraftByReviewId[review.review_id] ?? review.owner_reply ?? ""}
+                                            onChange={(e) =>
+                                                setReplyDraftByReviewId((current) => ({
+                                                    ...current,
+                                                    [review.review_id]: e.target.value,
+                                                }))
+                                            }
+                                            rows={2}
+                                            placeholder="Nhập phản hồi của chủ bài đăng..."
+                                            className="w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => handleOwnerReply(review.review_id)}
+                                            disabled={replySubmittingId === review.review_id}
+                                            className="rounded-xl bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-60"
+                                        >
+                                            {replySubmittingId === review.review_id ? "Đang gửi..." : (review.owner_reply ? "Cập nhật phản hồi" : "Gửi phản hồi")}
+                                        </button>
+                                    </div>
                                 )}
                             </div>
                         </div>
