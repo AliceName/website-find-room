@@ -3,6 +3,7 @@ import { Noto_Sans, Noto_Sans_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import FloatingRoomChat from "@/components/chat/FloatingRoomChat";
 import { RootLayoutClient } from "./RootLayoutClient";
 const notoSans = Noto_Sans({
   variable: "--font-sans",
@@ -39,6 +40,7 @@ export default function RootLayout({
           </RootLayoutClient>
         </main>
         <Footer />
+        <FloatingRoomChat />
       </body>
     </html>
   );

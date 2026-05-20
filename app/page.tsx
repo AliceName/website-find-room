@@ -193,24 +193,24 @@ export default async function HomePage() {
                                     Khám phá phòng phù hợp theo vị trí, giá và tiện ích bạn cần.
                                 </p>
 
-                                <div className="mt-6 flex gap-3">
+                                <form action="/rooms" method="get" className="mt-6 flex gap-3">
                                     <div className="relative flex-1">
                                         <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                                         <input
                                             type="text"
-                                            readOnly
+                                            name="search"
                                             placeholder="Thủ Đức, Bình Thạnh, Quận 1..."
                                             className="h-14 w-full rounded-2xl border border-sky-200 bg-white pl-12 pr-5 text-slate-700 focus:border-[#0EA5E9] focus:ring-4 focus:ring-sky-100 outline-none"
                                         />
                                     </div>
 
-                                    <Link
-                                        href="/rooms"
+                                    <button
+                                        type="submit"
                                         className="inline-flex h-14 items-center justify-center rounded-2xl bg-gradient-to-r from-[#0EA5E9] to-[#7DD3FC] px-8 font-bold text-white hover:brightness-105"
                                     >
                                         Tìm ngay
-                                    </Link>
-                                </div>
+                                    </button>
+                                </form>
                             </div>
 
                             {/* Value Props */}
