@@ -10,6 +10,7 @@ import {
     ArrowLeft,
     Sparkles,
     MapPinned,
+    RotateCcw,
 } from "lucide-react";
 
 import { supabase } from "@/lib/supabaseClient";
@@ -85,6 +86,8 @@ type ChatRoomResultsPayload = {
 const CHAT_RESULTS_STORAGE_KEY = "findroom:pending-chat-results";
 const CHAT_RESULTS_EVENT = "findroom:chat-room-results";
 
+const CHAT_FILTER_SOURCE = "chatbot";
+
 function parseOptionalNumber(value: string | null): number | null {
     if (!value) return null;
     const parsed = Number(value);
@@ -110,6 +113,7 @@ function RoomsContent() {
         title?: string;
         postId?: string;
     } | null>(null);
+    const [isChatFiltered, setIsChatFiltered] = useState(false);
 
     const [currentFilters, setCurrentFilters] = useState<SearchFilters>({});
     const [allAmenities, setAllAmenities] = useState<
@@ -171,6 +175,7 @@ function RoomsContent() {
             setFiltered(matchedPosts);
             setCurrentPage(1);
             setIsMapOpen(true);
+            setIsChatFiltered(payload?.source === CHAT_FILTER_SOURCE || payload?.source === "gemini-chat");
 
             requestAnimationFrame(() => {
                 setIsFiltering(false);
@@ -332,6 +337,7 @@ function RoomsContent() {
     const handleSearch = (filters: SearchFilters) => {
         setIsFiltering(true);
         setCurrentFilters(filters);
+        setIsChatFiltered(false);
 
         let result = [...posts];
 
@@ -427,6 +433,16 @@ function RoomsContent() {
         setCurrentFilters({});
         setFiltered(posts);
         setCurrentPage(1);
+        setIsChatFiltered(false);
+        setMapFocusTarget(null);
+    };
+
+    const handleResetChatFilter = () => {
+        setFiltered(posts);
+        setCurrentPage(1);
+        setIsChatFiltered(false);
+        setMapFocusTarget(null);
+        window.sessionStorage.removeItem(CHAT_RESULTS_STORAGE_KEY);
     };
 
     const handleFocusPostOnMap = (post: PostWithDetails) => {
@@ -521,6 +537,39 @@ function RoomsContent() {
                         amenityOptions={amenityOptions}
                     />
                 </motion.div>
+
+                {isChatFiltered ? (
+                    <motion.div
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mb-6 rounded-2xl border-2 border-emerald-200 bg-emerald-50 px-4 py-4 shadow-sm"
+                    >
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <p className="text-sm font-semibold text-emerald-900">
+                                Bạn đang xem danh sách phòng được lọc từ chatbot.
+                            </p>
+                            <button
+                                type="button"
+                                onClick={handleResetChatFilter}
+                                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-extrabold text-white transition hover:bg-emerald-700 sm:w-auto"
+                            >
+                                <RotateCcw className="h-4 w-4" />
+                                Hiện lại tất cả phòng
+                            </button>
+                        </div>
+                    </motion.div>
+                ) : null}
+
+                {isChatFiltered ? (
+                    <button
+                        type="button"
+                        onClick={handleResetChatFilter}
+                        className="fixed bottom-5 left-4 z-[1100] inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-extrabold text-white shadow-xl shadow-emerald-300 transition hover:bg-emerald-700 sm:bottom-6 sm:left-6"
+                    >
+                        <RotateCcw className="h-4 w-4" />
+                        Hiện tất cả phòng
+                    </button>
+                ) : null}
 
                 {/* MAP */}
                 <AnimatePresence>
