@@ -76,14 +76,40 @@ interface PostWithDetails {
     } | null;
 }
 
+type ChatRoomResultsPayload = {
+    postIds?: string[];
+    focusPostId?: string;
+    source?: string;
+};
+
+const CHAT_RESULTS_STORAGE_KEY = "findroom:pending-chat-results";
+const CHAT_RESULTS_EVENT = "findroom:chat-room-results";
+
+function parseOptionalNumber(value: string | null): number | null {
+    if (!value) return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+}
+
 function RoomsContent() {
     const searchParams = useSearchParams();
+    const focusLat = parseOptionalNumber(searchParams.get("focusLat"));
+    const focusLng = parseOptionalNumber(searchParams.get("focusLng"));
+    const focusPostId = searchParams.get("focusPostId") ?? undefined;
+    const focusTitle = searchParams.get("focusTitle") ?? undefined;
+    const openRoute = searchParams.get("openRoute") === "1";
 
     const [posts, setPosts] = useState<PostWithDetails[]>([]);
     const [filtered, setFiltered] = useState<PostWithDetails[]>([]);
     const [loading, setLoading] = useState(true);
     const [isMapOpen, setIsMapOpen] = useState(true);
     const [isFiltering, setIsFiltering] = useState(false);
+    const [mapFocusTarget, setMapFocusTarget] = useState<{
+        lat: number;
+        lng: number;
+        title?: string;
+        postId?: string;
+    } | null>(null);
 
     const [currentFilters, setCurrentFilters] = useState<SearchFilters>({});
     const [allAmenities, setAllAmenities] = useState<
@@ -102,6 +128,80 @@ function RoomsContent() {
     useEffect(() => {
         fetchData();
     }, []);
+
+    useEffect(() => {
+        const applyChatResults = (payload: ChatRoomResultsPayload | null) => {
+            const postIds = Array.isArray(payload?.postIds)
+                ? payload.postIds.filter((id): id is string => typeof id === "string" && id.length > 0)
+                : [];
+
+            if (postIds.length === 0) return;
+
+            if (posts.length === 0) {
+                window.sessionStorage.setItem(CHAT_RESULTS_STORAGE_KEY, JSON.stringify(payload));
+                return;
+            }
+
+            const order = new Map(postIds.map((id, index) => [id, index]));
+            const matchedPosts = posts
+                .filter((post) => order.has(post.post_id))
+                .sort((a, b) => (order.get(a.post_id) ?? 0) - (order.get(b.post_id) ?? 0));
+
+            if (matchedPosts.length === 0) return;
+
+            const focusPost =
+                (payload?.focusPostId
+                    ? matchedPosts.find((post) => post.post_id === payload.focusPostId)
+                    : null) ?? matchedPosts[0];
+
+            if (focusPost) {
+                const lat = Number(focusPost.rooms?.latitude);
+                const lng = Number(focusPost.rooms?.longitude);
+                if (Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0) {
+                    setMapFocusTarget({
+                        lat,
+                        lng,
+                        title: focusPost.post_title,
+                        postId: focusPost.post_id,
+                    });
+                }
+            }
+
+            setIsFiltering(true);
+            setFiltered(matchedPosts);
+            setCurrentPage(1);
+            setIsMapOpen(true);
+
+            requestAnimationFrame(() => {
+                setIsFiltering(false);
+                document.getElementById("rooms-map-section")?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start",
+                });
+            });
+        };
+
+        const handleChatResults = (event: Event) => {
+            applyChatResults((event as CustomEvent<ChatRoomResultsPayload>).detail ?? null);
+        };
+
+        window.addEventListener(CHAT_RESULTS_EVENT, handleChatResults);
+
+        const pending = window.sessionStorage.getItem(CHAT_RESULTS_STORAGE_KEY);
+        if (pending) {
+            try {
+                const payload = JSON.parse(pending) as ChatRoomResultsPayload;
+                if (posts.length > 0) {
+                    window.sessionStorage.removeItem(CHAT_RESULTS_STORAGE_KEY);
+                }
+                applyChatResults(payload);
+            } catch {
+                window.sessionStorage.removeItem(CHAT_RESULTS_STORAGE_KEY);
+            }
+        }
+
+        return () => window.removeEventListener(CHAT_RESULTS_EVENT, handleChatResults);
+    }, [posts]);
 
     useEffect(() => {
         const searchQuery = searchParams.get("search");
@@ -329,6 +429,27 @@ function RoomsContent() {
         setCurrentPage(1);
     };
 
+    const handleFocusPostOnMap = (post: PostWithDetails) => {
+        const lat = Number(post.rooms?.latitude);
+        const lng = Number(post.rooms?.longitude);
+
+        if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat === 0 || lng === 0) return;
+
+        setMapFocusTarget({
+            lat,
+            lng,
+            title: post.post_title,
+            postId: post.post_id,
+        });
+        setIsMapOpen(true);
+        requestAnimationFrame(() => {
+            document.getElementById("rooms-map-section")?.scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+            });
+        });
+    };
+
     return (
         <div className="relative min-h-screen bg-[#F0F9FF] text-slate-800 overflow-hidden">
             {/* Background Pattern + Glow */}
@@ -405,18 +526,34 @@ function RoomsContent() {
                 <AnimatePresence>
                     {isMapOpen && (
                         <motion.div
+                            id="rooms-map-section"
                             initial={{ opacity: 0, y: -12, height: 0 }}
-                            animate={{ opacity: 1, y: 0, height: 340 }}
+                            animate={{ opacity: 1, y: 0, height: 560 }}
                             exit={{ opacity: 0, y: -12, height: 0 }}
                             transition={{ duration: 0.35 }}
-                            className="mb-8 overflow-hidden rounded-[2rem] border border-sky-100 bg-white shadow-xl"
+                            className="mb-10 overflow-hidden rounded-[2.5rem] border border-sky-100 bg-white shadow-2xl"
                         >
-                            <div className="flex items-center gap-3 border-b border-sky-100 px-6 py-4">
-                                <MapPinned className="h-5 w-5 text-[#0EA5E9]" />
-                                <h2 className="font-bold text-slate-900">Bản đồ phòng trọ</h2>
+                            <div className="flex flex-col gap-3 border-b border-sky-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-50 text-[#0EA5E9]">
+                                        <MapPinned className="h-5 w-5" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-lg font-black text-slate-900">Bản đồ phòng trọ</h2>
+                                        <p className="text-sm text-slate-500">Khám phá phòng ngay trên bản đồ với khung nhìn lớn hơn</p>
+                                    </div>
+                                </div>
+                                <span className="inline-flex w-fit items-center rounded-full bg-sky-50 px-4 py-2 text-xs font-bold text-[#0EA5E9]">
+                                    {filtered.length} phòng đang hiển thị
+                                </span>
                             </div>
-                            <div className="h-[280px] p-4">
-                                <MapView posts={filtered} filters={currentFilters} />
+                            <div className="h-[500px] p-4">
+                                <MapView
+                                    posts={filtered}
+                                    filters={currentFilters}
+                                    focusTarget={mapFocusTarget ?? ((focusPostId && focusLat !== null && focusLng !== null) ? { lat: focusLat, lng: focusLng, title: focusTitle, postId: focusPostId } : (focusLat !== null && focusLng !== null ? { lat: focusLat, lng: focusLng, title: focusTitle } : null))}
+                                    openRoutePanel={openRoute}
+                                />
                             </div>
                         </motion.div>
                     )}
@@ -451,9 +588,13 @@ function RoomsContent() {
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: index * 0.04 }}
                                     >
-                                        <Link href={`/rooms/${post.post_id}`} className="block">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleFocusPostOnMap(post)}
+                                            className="block w-full text-left"
+                                        >
                                             <PostCard post={post as any} />
-                                        </Link>
+                                        </button>
                                     </motion.div>
                                 ))}
                             </motion.div>

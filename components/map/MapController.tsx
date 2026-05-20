@@ -3,6 +3,8 @@ import { useEffect, useRef } from "react";
 import { useMap } from "react-leaflet";
 import { geocodeAddress } from "@/lib/services/geocode";
 
+const DEFAULT_HCM_CENTER = { lat: 10.8411, lng: 106.8098 };
+
 export function MapController({
     filters,
     posts,
@@ -46,10 +48,7 @@ export function MapController({
                 lastKeyword.current = "";
 
                 // Về lại bài đăng đầu tiên nếu có
-                const first = posts.find((p) => p.rooms?.latitude && p.rooms?.longitude);
-                if (first) {
-                    safeFlyTo(Number(first.rooms.latitude), Number(first.rooms.longitude));
-                }
+                safeFlyTo(DEFAULT_HCM_CENTER.lat, DEFAULT_HCM_CENTER.lng, 10);
             }
             return;
         }
@@ -64,10 +63,7 @@ export function MapController({
             if (isDescription) {
                 setSearchLocation(null);
                 // Tìm bài đầu tiên khớp với mô tả để bay tới
-                const firstMatch = posts.find((p) => p.rooms?.latitude && p.rooms?.longitude);
-                if (firstMatch) {
-                    safeFlyTo(Number(firstMatch.rooms.latitude), Number(firstMatch.rooms.longitude));
-                }
+                safeFlyTo(DEFAULT_HCM_CENTER.lat, DEFAULT_HCM_CENTER.lng, 10);
                 lastKeyword.current = keyword;
                 return;
             }
@@ -85,12 +81,7 @@ export function MapController({
             } else {
                 setSearchLocation(null);
                 // Nếu không ra địa điểm, bay về bài đầu tiên có trong danh sách đã lọc
-                if (posts.length > 0) {
-                    const first = posts.find((p) => p.rooms?.latitude && p.rooms?.longitude);
-                    if (first) {
-                        safeFlyTo(Number(first.rooms.latitude), Number(first.rooms.longitude));
-                    }
-                }
+                safeFlyTo(DEFAULT_HCM_CENTER.lat, DEFAULT_HCM_CENTER.lng, 10);
             }
             lastKeyword.current = keyword;
         }, 800); // Tăng lên 800ms để người dùng gõ xong hẳn mới bay
