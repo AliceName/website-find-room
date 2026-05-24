@@ -47,6 +47,8 @@ FindRoom là một ứng dụng web hiện đại được xây dựng để k�
     cd website-find-room
 ### 2. Cài đặt thư viện
     npm install
+    npm install framer-motion
+    npm install lucide-react
 ### 3. Cấu hình biến môi trường
 Tạo file `.env.local` ở thư mục gốc (file này không được commit). Thêm Supabase:
 
@@ -60,6 +62,9 @@ Nếu dùng **AI tìm phòng** (`/gemini`) hoặc playground Gemini, thêm **m�
     GOOGLE_API_KEY=your_google_api_key
 
 Nếu đặt cả `GOOGLE_API_KEY` và `GEMINI_API_KEY`, SDK ưu tiên `GOOGLE_API_KEY`. Tùy chọn: `GEMINI_MODEL` (mặc định `gemini-2.5-flash`; alias ổn định: `gemini-flash-latest`). Các model `gemini-1.5-*` không còn trong Generative Language API. Quản lý key tại [Google AI Studio](https://aistudio.google.com/api-keys).
+
+    OPENROUTESERVICE_API_KEY=your_openrouteservice_api_key
+    OPENROUTESERVICE_PROFILE=driving-car
 ### 4. Chạy dự án
     npm run dev
 Truy cập http://localhost:3000 để xem kết quả.
