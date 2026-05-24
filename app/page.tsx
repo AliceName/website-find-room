@@ -93,14 +93,14 @@ export default async function HomePage() {
             )
         `)
         .order("post_created_at", { ascending: false })
-        .limit(6);
+        .limit(20);
 
     if (error) console.error(error);
 
     const posts =
-        ((data as unknown as any[] | null) ?? []).filter(
-            (post) => post.rooms?.is_hidden !== true
-        );
+        ((data as unknown as any[] | null) ?? [])
+            .filter((post) => post.rooms?.is_hidden !== true && post.rooms?.room_status !== false)
+            .slice(0, 6);
 
     return (
         <div className="relative min-h-screen bg-[#F0F9FF] text-slate-800 overflow-hidden">

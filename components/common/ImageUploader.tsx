@@ -221,7 +221,7 @@ export default function ImageUploader({
                 <img
                   src={image.image_url}
                   alt="Room"
-                  className="w-full h-24 object-cover"
+                  className="w-full h-24 object-contain"
                 />
                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-1">
                   <button
