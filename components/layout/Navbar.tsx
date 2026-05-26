@@ -13,25 +13,28 @@ export default function Navbar() {
     const [mobileOpen, setMobileOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
 
+    const clearAuthState = () => {
+        setUser(null);
+        setUserRole(null);
+        setUnreadCount(0);
+    };
+
     useEffect(() => {
         const initAuth = async () => {
-            const { data, error } = await supabase.auth.getUser();
+            const { data, error } = await supabase.auth.getSession();
 
             if (error) {
-                if (error.message?.includes("Refresh Token Not Found")) {
-                    await supabase.auth.signOut({ scope: "local" });
-                }
-                setUser(null);
-                setUserRole(null);
-                setUnreadCount(0);
+                clearAuthState();
                 return;
             }
 
-            const currentUser = data.user;
+            const currentUser = data.session?.user ?? null;
             setUser(currentUser);
             if (currentUser) {
                 await fetchUserRole(currentUser.id);
                 await fetchUnreadCount(currentUser.id);
+            } else {
+                clearAuthState();
             }
         };
 
@@ -43,8 +46,7 @@ export default function Navbar() {
                 void fetchUserRole(session.user.id);
                 void fetchUnreadCount(session.user.id);
             } else {
-                setUserRole(null);
-                setUnreadCount(0);
+                clearAuthState();
             }
         });
 
@@ -84,10 +86,8 @@ export default function Navbar() {
     };
 
     const handleSignOut = async () => {
-        await supabase.auth.signOut();
-        setUser(null);
-        setUserRole(null);
-        setUnreadCount(0);
+        await supabase.auth.signOut({ scope: "local" });
+        clearAuthState();
         setMobileOpen(false);
         router.push("/");
         router.refresh();

@@ -17,11 +17,6 @@ import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import { MapController } from "./MapController";
-<<<<<<< HEAD
-import Link from "next/link";
-import Image from "next/image";
-=======
->>>>>>> 149627bcaf11217d6585c289c9861a6c0ce525d8
 
 const postIcon = L.icon({
     iconUrl: "https://cdn-icons-png.flaticon.com/512/684/684908.png",

@@ -273,7 +273,7 @@ function RoomsContent() {
 
             if (postsRes.data) {
                 const visiblePosts = (postsRes.data as unknown as PostWithDetails[]).filter(
-                    (post) => post.rooms?.is_hidden !== true
+                    (post) => post.rooms?.is_hidden !== true && post.rooms?.room_status !== false
                 );
                 setPosts(visiblePosts);
                 setFiltered(visiblePosts);
