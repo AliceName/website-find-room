@@ -11,6 +11,7 @@ import {
     Polyline,
     TileLayer,
     useMap,
+    useMapEvents,
 } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-markercluster";
 import "leaflet/dist/leaflet.css";
@@ -76,6 +77,22 @@ function MapAutoResize() {
         }, 300);
         return () => clearTimeout(timer);
     }, [map]);
+    return null;
+}
+
+function PickLocationMarker({
+    enabled,
+    onPick,
+}: {
+    enabled: boolean;
+    onPick: (lat: number, lng: number) => void;
+}) {
+    useMapEvents({
+        click(e) {
+            if (!enabled) return;
+            onPick(e.latlng.lat, e.latlng.lng);
+        },
+    });
     return null;
 }
 
@@ -243,6 +260,8 @@ export default function MapView({
     const [routeDebug, setRouteDebug] = useState<string | null>(null);
     const [locationError, setLocationError] = useState<string | null>(null);
     const [locating, setLocating] = useState(false);
+    const [pickMode, setPickMode] = useState(false);
+    const [pickedLocation, setPickedLocation] = useState<{ lat: number; lng: number } | null>(null);
 
     const isGeographicSearch = useMemo(() => {
         const keyword = filters?.keyword?.toLowerCase() || "";
@@ -353,24 +372,26 @@ export default function MapView({
         return { lat, lng };
     }, [selectedRoom]);
 
+    const routeOrigin = currentLocation ?? pickedLocation;
+
     const fallbackLine: [number, number][] | null =
-        currentLocation && selectedCoords
-            ? [[currentLocation.lat, currentLocation.lng], [selectedCoords.lat, selectedCoords.lng]]
+        routeOrigin && selectedCoords
+            ? [[routeOrigin.lat, routeOrigin.lng], [selectedCoords.lat, selectedCoords.lng]]
             : null;
 
     // routeKey gộp postId + coords → đảm bảo re-fetch kể cả khi 2 phòng cùng tọa độ
     const selectedPostId: string | null = selectedPost ? getPostKey(selectedPost) : null;
-    const routeKey = `${selectedPostId ?? "none"}-${selectedCoords?.lat ?? 0}-${selectedCoords?.lng ?? 0}`;
+    const routeKey = `${selectedPostId ?? "none"}-${selectedCoords?.lat ?? 0}-${selectedCoords?.lng ?? 0}-${routeOrigin?.lat ?? 0}-${routeOrigin?.lng ?? 0}`;
 
     useEffect(() => {
-        if (!currentLocation || !selectedCoords) {
+        if (!routeOrigin || !selectedCoords) {
             setRoute(null);
             setRouteError(null);
             setRouteDebug(null);
             return;
         }
 
-        const origin = `${currentLocation.lng},${currentLocation.lat}`;
+        const origin = `${routeOrigin.lng},${routeOrigin.lat}`;
         const destination = `${selectedCoords.lng},${selectedCoords.lat}`;
 
         const controller = new AbortController();
@@ -410,7 +431,7 @@ export default function MapView({
             clearTimeout(timer);
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [routeKey, currentLocation?.lat, currentLocation?.lng]);
+    }, [routeKey, routeOrigin?.lat, routeOrigin?.lng]);
 
     const handleClearSelection = () => {
         setSelectedPost(null);
@@ -418,11 +439,14 @@ export default function MapView({
         setRouteError(null);
         setRouteDebug(null);
         setRoutePanelOpen(false);
+        setPickedLocation(null);
+        setPickMode(false);
     };
 
     const handleUseCurrentLocation = () => {
         setLocationError(null);
         setLocating(true);
+        setPickMode(false);
         if (!navigator.geolocation) {
             setLocating(false);
             setLocationError("Trình duyệt không hỗ trợ định vị.");
@@ -431,6 +455,7 @@ export default function MapView({
         navigator.geolocation.getCurrentPosition(
             (pos) => {
                 setCurrentLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+                setPickedLocation(null);
                 setLocating(false);
             },
             () => {
@@ -439,6 +464,19 @@ export default function MapView({
             },
             { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
         );
+    };
+
+    const handlePickLocationMode = () => {
+        setLocationError(null);
+        setCurrentLocation(null);
+        setPickedLocation(null);
+        setPickMode(true);
+    };
+
+    const handlePickedMapLocation = (lat: number, lng: number) => {
+        setPickedLocation({ lat, lng });
+        setPickMode(false);
+        setCurrentLocation(null);
     };
 
     return (
@@ -454,9 +492,21 @@ export default function MapView({
                     >
                         {locating ? "Đang định vị..." : "Dùng vị trí hiện tại"}
                     </button>
+                    <button
+                        type="button"
+                        onClick={handlePickLocationMode}
+                        className={`rounded-xl px-3 py-2 text-xs font-bold transition ${pickMode ? "bg-amber-500 text-white hover:bg-amber-600" : "border border-amber-200 bg-white text-amber-700 hover:bg-amber-50"}`}
+                    >
+                        {pickMode ? "Đang chấm vị trí..." : "Chấm vị trí trên bản đồ"}
+                    </button>
                     {currentLocation ? (
                         <button type="button" onClick={handleUseCurrentLocation} className="rounded-xl border border-sky-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-sky-50">
                             Định vị lại
+                        </button>
+                    ) : null}
+                    {pickedLocation ? (
+                        <button type="button" onClick={() => { setPickedLocation(null); setRoute(null); setRouteError(null); setRouteDebug(null); }} className="rounded-xl border border-amber-200 bg-white px-3 py-2 text-xs font-bold text-amber-700 hover:bg-amber-50">
+                            Bỏ điểm chấm
                         </button>
                     ) : null}
                     {selectedPost ? (
@@ -466,9 +516,9 @@ export default function MapView({
                     ) : null}
                 </div>
                 {locationError ? <p className="mt-2 max-w-[260px] text-xs text-red-600">{locationError}</p> : null}
-                {currentLocation && selectedCoords ? (
+                {routeOrigin && selectedCoords ? (
                     <div className="mt-2 space-y-1 text-xs text-slate-600">
-                        <p>Khoảng cách chim bay: {formatDistance(getDistanceKm(currentLocation.lat, currentLocation.lng, selectedCoords.lat, selectedCoords.lng) * 1000)}</p>
+                        <p>{pickedLocation ? "Khoảng cách từ điểm chấm:" : "Khoảng cách chim bay:"} {formatDistance(getDistanceKm(routeOrigin.lat, routeOrigin.lng, selectedCoords.lat, selectedCoords.lng) * 1000)}</p>
                         {route
                             ? <p>Đường đi: {formatDistance(route.distance)} · {formatDuration(route.duration)}</p>
                             : routeLoading
@@ -486,6 +536,7 @@ export default function MapView({
                 <MapAutoResize />
                 <MapController posts={filteredPosts} filters={filters} setSearchLocation={setSearchLocation} />
                 <MapImperativeRef mapRef={mapRef} />
+                <PickLocationMarker enabled={pickMode} onPick={handlePickedMapLocation} />
 
                 {/* ─── FIX: Single unified camera controller replaces two conflicting ones */}
                 <MapCameraController
@@ -548,6 +599,12 @@ export default function MapView({
                             pathOptions={{ color: "#3b82f6", fillOpacity: 0.08, weight: 1.5, dashArray: "6, 6" }}
                         />
                     </>
+                ) : null}
+
+                {pickedLocation ? (
+                    <Marker position={[pickedLocation.lat, pickedLocation.lng]} icon={userIcon} zIndexOffset={1100}>
+                        <Popup><p className="font-bold">Điểm bạn chấm</p></Popup>
+                    </Marker>
                 ) : null}
 
                 {selectedCoords ? (
@@ -613,7 +670,7 @@ export default function MapView({
                             </div>
 
                             {routeError ? <p className="mt-2 text-xs font-medium text-red-600">{routeError}</p> : null}
-                            {!currentLocation ? <p className="mt-2 text-xs text-amber-600">Bấm "Dùng vị trí hiện tại" để lấy tuyến đường.</p> : null}
+                            {!routeOrigin ? <p className="mt-2 text-xs text-amber-600">Bấm "Dùng vị trí hiện tại" hoặc "Chấm vị trí trên bản đồ" để lấy tuyến đường.</p> : null}
 
                             <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
                                 <Link
