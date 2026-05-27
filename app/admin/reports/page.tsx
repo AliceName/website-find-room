@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
@@ -21,7 +21,7 @@ interface ReportListItem {
   assigned_user?: { user_name: string | null } | null;
 }
 
-export default function AdminReportsPage() {
+function AdminReportsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const statusParam = (searchParams.get("status") as FilterStatus) || "all";
@@ -152,5 +152,13 @@ export default function AdminReportsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AdminReportsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-50 px-4 py-8 text-slate-900 md:px-8">Äang táº£i report...</div>}>
+      <AdminReportsContent />
+    </Suspense>
   );
 }

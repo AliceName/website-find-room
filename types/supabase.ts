@@ -23,6 +23,67 @@ export interface Database {
           amenity_name?: string
         }
       }
+      conversations: {
+        Row: {
+          conversation_id: string
+          renter_id: string
+          owner_id: string
+          post_id: string | null
+          room_id: string | null
+          retention_policy: "manual" | "3_days" | "7_days" | "30_days" | "forever"
+          expires_at: string | null
+          last_message_at: string | null
+          created_at: string
+          updated_at: string | null
+        }
+        Insert: {
+          conversation_id?: string
+          renter_id: string
+          owner_id: string
+          post_id?: string | null
+          room_id?: string | null
+          retention_policy?: "manual" | "3_days" | "7_days" | "30_days" | "forever"
+          expires_at?: string | null
+          last_message_at?: string | null
+          created_at?: string
+          updated_at?: string | null
+        }
+        Update: {
+          conversation_id?: string
+          renter_id?: string
+          owner_id?: string
+          post_id?: string | null
+          room_id?: string | null
+          retention_policy?: "manual" | "3_days" | "7_days" | "30_days" | "forever"
+          expires_at?: string | null
+          last_message_at?: string | null
+          created_at?: string
+          updated_at?: string | null
+        }
+      }
+      conversation_user_states: {
+        Row: {
+          conversation_id: string
+          user_id: string
+          state: "hidden" | "deleted"
+          created_at: string
+          updated_at: string | null
+        }
+        Insert: {
+          conversation_id: string
+          user_id: string
+          state: "hidden" | "deleted"
+          created_at?: string
+          updated_at?: string | null
+        }
+        Update: {
+          conversation_id?: string
+          user_id?: string
+          state?: "hidden" | "deleted"
+          created_at?: string
+          updated_at?: string | null
+        }
+      }
       favorites: {
         Row: {
           favority_id: string
@@ -47,20 +108,55 @@ export interface Database {
         Row: {
           location_id: string
           city: string
-          district: string
-          ward: string
+          district: string | null
+          ward: string | null
         }
         Insert: {
           location_id?: string
           city: string
-          district: string
-          ward: string
+          district?: string | null
+          ward?: string | null
         }
         Update: {
           location_id?: string
           city?: string
-          district?: string
-          ward?: string
+          district?: string | null
+          ward?: string | null
+        }
+      }
+      messages: {
+        Row: {
+          message_id: string
+          conversation_id: string
+          sender_user_id: string
+          message_content: string
+          message_type: "text" | "system"
+          is_read: boolean
+          read_at: string | null
+          created_at: string
+          deleted_at: string | null
+        }
+        Insert: {
+          message_id?: string
+          conversation_id: string
+          sender_user_id: string
+          message_content: string
+          message_type?: "text" | "system"
+          is_read?: boolean
+          read_at?: string | null
+          created_at?: string
+          deleted_at?: string | null
+        }
+        Update: {
+          message_id?: string
+          conversation_id?: string
+          sender_user_id?: string
+          message_content?: string
+          message_type?: "text" | "system"
+          is_read?: boolean
+          read_at?: string | null
+          created_at?: string
+          deleted_at?: string | null
         }
       }
       posts: {
@@ -93,6 +189,70 @@ export interface Database {
           post_update_at?: string | null
           post_expired_at?: string | null
           view_count?: number | null
+        }
+      }
+      post_reports: {
+        Row: {
+          report_id: string
+          post_id: string
+          reporter_user_id: string
+          reason_code: "fake_info" | "spam" | "duplicate" | "abuse" | "scam_suspected" | "other"
+          reason_detail: string | null
+          report_status: "open" | "reviewing" | "resolved" | "rejected"
+          assigned_to: string | null
+          resolution_note: string | null
+          report_created_at: string | null
+          report_updated_at: string | null
+        }
+        Insert: {
+          report_id?: string
+          post_id: string
+          reporter_user_id: string
+          reason_code: "fake_info" | "spam" | "duplicate" | "abuse" | "scam_suspected" | "other"
+          reason_detail?: string | null
+          report_status?: "open" | "reviewing" | "resolved" | "rejected"
+          assigned_to?: string | null
+          resolution_note?: string | null
+          report_created_at?: string | null
+          report_updated_at?: string | null
+        }
+        Update: {
+          report_id?: string
+          post_id?: string
+          reporter_user_id?: string
+          reason_code?: "fake_info" | "spam" | "duplicate" | "abuse" | "scam_suspected" | "other"
+          reason_detail?: string | null
+          report_status?: "open" | "reviewing" | "resolved" | "rejected"
+          assigned_to?: string | null
+          resolution_note?: string | null
+          report_created_at?: string | null
+          report_updated_at?: string | null
+        }
+      }
+      post_report_actions: {
+        Row: {
+          action_id: string
+          report_id: string
+          actor_user_id: string | null
+          action_type: "open" | "reviewing" | "resolved" | "rejected" | "note"
+          action_note: string | null
+          action_created_at: string | null
+        }
+        Insert: {
+          action_id?: string
+          report_id: string
+          actor_user_id?: string | null
+          action_type: "open" | "reviewing" | "resolved" | "rejected" | "note"
+          action_note?: string | null
+          action_created_at?: string | null
+        }
+        Update: {
+          action_id?: string
+          report_id?: string
+          actor_user_id?: string | null
+          action_type?: "open" | "reviewing" | "resolved" | "rejected" | "note"
+          action_note?: string | null
+          action_created_at?: string | null
         }
       }
       reviews: {
@@ -175,6 +335,9 @@ export interface Database {
           room_type_id: string | null
           room_created_at: string | null
           vr_url: string | null
+          address_detail: string | null
+          full_address: string | null
+          is_hidden: boolean | null
         }
         Insert: {
           room_id?: string
@@ -189,6 +352,9 @@ export interface Database {
           room_type_id?: string | null
           room_created_at?: string | null
           vr_url?: string | null
+          address_detail?: string | null
+          full_address?: string | null
+          is_hidden?: boolean | null
         }
         Update: {
           room_id?: string
@@ -203,6 +369,9 @@ export interface Database {
           room_type_id?: string | null
           room_created_at?: string | null
           vr_url?: string | null
+          address_detail?: string | null
+          full_address?: string | null
+          is_hidden?: boolean | null
         }
       }
       roomtypes: {
@@ -231,6 +400,9 @@ export interface Database {
           user_role: string | null
           user_created_at: string | null
           user_avatar: string | null
+          is_banned: boolean | null
+          banned_at: string | null
+          ban_reason: string | null
         }
         Insert: {
           user_id: string
@@ -240,6 +412,9 @@ export interface Database {
           user_role?: string | null
           user_created_at?: string | null
           user_avatar?: string | null
+          is_banned?: boolean | null
+          banned_at?: string | null
+          ban_reason?: string | null
         }
         Update: {
           user_id?: string
@@ -249,6 +424,9 @@ export interface Database {
           user_role?: string | null
           user_created_at?: string | null
           user_avatar?: string | null
+          is_banned?: boolean | null
+          banned_at?: string | null
+          ban_reason?: string | null
         }
       }
     }

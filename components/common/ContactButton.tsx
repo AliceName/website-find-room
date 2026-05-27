@@ -83,14 +83,6 @@ export default function ContactButton({
     }
   };
 
-  const handleWhatsApp = () => {
-    if (ownerPhone) {
-      const message = `Xin chào, tôi quan tâm đến phòng: ${roomTitle}`;
-      const whatsappUrl = `https://wa.me/${ownerPhone.replace(/[^\d]/g, "")}?text=${encodeURIComponent(message)}`;
-      window.open(whatsappUrl, "_blank");
-    }
-  };
-
   const handleCall = () => {
     if (ownerPhone) {
       window.location.href = `tel:${ownerPhone}`;
@@ -122,14 +114,6 @@ export default function ContactButton({
         )}
         {ownerPhone && (
           <>
-            <Button
-              variant="secondary"
-              size="md"
-              onClick={handleWhatsApp}
-              title="Liên hệ qua WhatsApp"
-            >
-              💬 WhatsApp
-            </Button>
             <Button
               variant="secondary"
               size="md"

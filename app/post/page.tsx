@@ -7,7 +7,8 @@ import { uploadRoomImage } from "@/lib/services/storage.service";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import VietnamAddressSelect from "@/components/common/VietnamAddressSelect";
-import { Sparkles, ArrowLeft, Check } from "lucide-react";
+import { validateBasicPostInput, validateFinalPostInput, validateDescription, buildValidationMessage } from "@/lib/validation/postValidation";
+import { AlertCircle, ArrowLeft, Check, X } from "lucide-react";
 
 const PostLocationPicker = dynamic(
     () => import("@/components/map/PostLocationPicker"),
@@ -61,6 +62,103 @@ interface AmenityOption {
     icon?: string;
 }
 
+interface PostFormState {
+    post_title: string;
+    room_type: string;
+    room_price: string;
+    room_area: string;
+    city: string;
+    district: string;
+    ward: string;
+    address_detail: string;
+    selectedAmenityIds: string[];
+    room_description: string;
+    vr_url: string;
+    images: Array<{ file: File; is360: boolean }>;
+}
+
+function getErrorMessages(error: string): string[] {
+    return error
+        .replace(/^Đăng tin thất bại:\s*/i, "")
+        .split("\n")
+        .map((message) => message.trim())
+        .filter(Boolean);
+}
+
+function ValidationMessageBox({ error, onClose }: { error: string; onClose: () => void }) {
+    const messages = getErrorMessages(error);
+
+    return (
+        <div
+            role="alert"
+            aria-modal="true"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 py-6 backdrop-blur-sm"
+        >
+            <div className="relative w-full max-w-lg overflow-hidden rounded-[28px] border border-white/70 bg-white text-slate-900 shadow-[0_30px_90px_rgba(15,23,42,0.28)]">
+                <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-red-500 via-orange-400 to-amber-400" />
+                <button
+                    type="button"
+                    onClick={onClose}
+                    aria-label="Đóng thông báo lỗi"
+                    className="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/85 text-slate-500 shadow-sm ring-1 ring-slate-200 transition hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-4 focus:ring-red-100"
+                >
+                    <X className="h-4 w-4" />
+                </button>
+
+                <div className="bg-gradient-to-br from-red-50 via-white to-amber-50 px-6 pb-5 pt-7">
+                    <div className="flex items-start gap-4 pr-10">
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-red-600 text-white shadow-lg shadow-red-200">
+                            <AlertCircle className="h-7 w-7" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-xl font-black tracking-tight text-slate-950">Thông tin chưa hợp lệ</p>
+                            <p className="mt-1 text-sm font-medium leading-6 text-slate-600">
+                                Vui lòng sửa các mục bên dưới trước khi tiếp tục đăng tin.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="px-6 pb-6 pt-4">
+                    <div className="rounded-2xl border border-red-100 bg-red-50/70 p-4">
+                        <div className="space-y-2 text-sm font-semibold leading-6 text-red-900">
+                            {messages.length > 1 ? (
+                                <ul className="space-y-2">
+                                    {messages.map((message, index) => (
+                                        <li key={message} className="flex gap-3">
+                                            <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-xs font-black text-red-600 ring-1 ring-red-100">
+                                                {index + 1}
+                                            </span>
+                                            <span className="min-w-0 flex-1">{message}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <div className="flex gap-3">
+                                    <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-xs font-black text-red-600 ring-1 ring-red-100">
+                                        !
+                                    </span>
+                                    <p className="min-w-0 flex-1">{messages[0] || "Vui lòng kiểm tra lại thông tin đã nhập."}</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="mt-5 flex justify-end">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-200 transition hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-200"
+                        >
+                            Tôi đã hiểu
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function PostPage() {
     const router = useRouter();
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -75,7 +173,7 @@ export default function PostPage() {
     const [latitude, setLatitude] = useState<number | null>(null);
     const [longitude, setLongitude] = useState<number | null>(null);
 
-    const [form, setForm] = useState({
+    const [form, setForm] = useState<PostFormState>({
         post_title: "",
         room_type: "phong_tro",
         room_price: "",
@@ -84,10 +182,10 @@ export default function PostPage() {
         district: "",
         ward: "",
         address_detail: "",
-        selectedAmenityIds: [] as string[],
+        selectedAmenityIds: [],
         room_description: "",
         vr_url: "",
-        images: [] as Array<{ file: File; is360: boolean }>,
+        images: [],
     });
 
     useEffect(() => {
@@ -123,7 +221,7 @@ export default function PostPage() {
         }
     };
 
-    const update = (key: string, value: any) => {
+    const update = <K extends keyof PostFormState>(key: K, value: PostFormState[K]) => {
         setForm(prev => ({ ...prev, [key]: value }));
     };
 
@@ -156,16 +254,38 @@ export default function PostPage() {
 
     const validateStep = (s: number): string | null => {
         if (s === 1) {
-            if (!form.post_title.trim()) return "Vui lòng nhập tiêu đề bài đăng.";
-            if (!form.room_price || Number(form.room_price) <= 0) return "Vui lòng nhập giá thuê hợp lệ.";
-            if (!form.room_area || Number(form.room_area) <= 0) return "Vui lòng nhập diện tích hợp lệ.";
-            if (!form.city.trim()) return "Vui lòng chọn tỉnh / thành phố.";
-            if (!form.district.trim()) return "Vui lòng chọn quận / huyện.";
-            if (!form.ward.trim()) return "Vui lòng chọn phường / xã.";
-            if (latitude === null || longitude === null) return "Vui lòng chọn vị trí trên bản đồ.";
+            const result = validateBasicPostInput({
+                post_title: form.post_title,
+                room_price: form.room_price,
+                room_area: form.room_area,
+                city: form.city,
+                district: form.district,
+                ward: form.ward,
+                latitude,
+                longitude,
+                room_type: form.room_type,
+            });
+            if (!result.ok) return buildValidationMessage(result.errors);
         }
         if (s === 2) {
-            if (!form.room_description.trim()) return "Vui lòng nhập mô tả căn phòng.";
+            return validateDescription(form.room_description);
+        }
+        if (s === 3) {
+            const result = validateFinalPostInput({
+                post_title: form.post_title,
+                room_type: form.room_type,
+                room_price: form.room_price,
+                room_area: form.room_area,
+                city: form.city,
+                district: form.district,
+                ward: form.ward,
+                latitude,
+                longitude,
+                room_description: form.room_description,
+                images_count: form.images.length,
+                vr_url: form.vr_url,
+            });
+            if (!result.ok) return buildValidationMessage(result.errors);
         }
         return null;
     };
@@ -190,11 +310,32 @@ export default function PostPage() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error("Bạn cần đăng nhập để đăng tin.");
 
-            const fullAddress = [form.address_detail, form.ward, form.district, form.city].filter(Boolean).join(", ");
+            const validation = validateFinalPostInput({
+                post_title: form.post_title,
+                room_type: form.room_type,
+                room_price: form.room_price,
+                room_area: form.room_area,
+                city: form.city,
+                district: form.district,
+                ward: form.ward,
+                latitude,
+                longitude,
+                room_description: form.room_description,
+                images_count: form.images.length,
+                vr_url: form.vr_url,
+            });
+            if (!validation.ok) {
+                throw new Error(buildValidationMessage(validation.errors));
+            }
+
+            // Hành chính 2 cấp mới: Tỉnh/TP → Phường/Xã (bỏ quận/huyện)
+            const fullAddress = [form.address_detail, form.ward, form.city]
+                .filter(Boolean)
+                .join(", ");
 
             const { data: locationData, error: locErr } = await supabase
                 .from("locations")
-                .insert({ city: form.city, district: form.district, ward: form.ward })
+                .insert({ city: form.city, district: null, ward: form.ward || null })
                 .select("location_id")
                 .single();
             if (locErr) throw new Error("Lỗi tạo địa điểm: " + locErr.message);
@@ -311,11 +452,7 @@ export default function PostPage() {
                     ))}
                 </div>
 
-                {error && (
-                    <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-5 text-red-700">
-                        {error}
-                    </div>
-                )}
+                {error && <ValidationMessageBox error={error} onClose={() => setError(null)} />}
 
                 <div className="rounded-[32px] border border-sky-100 bg-white shadow-2xl p-8 md:p-10">
                     {/* STEP 1 */}
@@ -361,9 +498,14 @@ export default function PostPage() {
                                         type="number"
                                         value={form.room_price}
                                         onChange={e => update("room_price", e.target.value)}
-                                        placeholder="3000000"
+                                        placeholder="2.000.000"
                                         className="w-full rounded-2xl border border-sky-200 bg-white px-5 py-4 focus:border-[#0EA5E9] focus:ring-4 focus:ring-sky-100 outline-none"
                                     />
+                                    {form.room_price && !Number.isNaN(Number(form.room_price)) && (
+                                        <p className="mt-2 text-sm text-slate-500">
+                                            Đã nhập: {Number(form.room_price).toLocaleString("vi-VN")} đ/tháng
+                                        </p>
+                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Diện tích (m²) *</label>
@@ -377,16 +519,17 @@ export default function PostPage() {
                                 </div>
                             </div>
 
+                            {/* ĐỊA CHỈ — 2 cấp mới: Tỉnh/TP → Phường/Xã */}
                             <div>
                                 <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-3">📍 Địa chỉ</label>
                                 <VietnamAddressSelect
                                     city={form.city}
                                     district={form.district}
                                     ward={form.ward}
-                                    onAddressChange={(city, district, ward) => {
+                                    onAddressChange={(city, ward) => {
                                         update("city", city);
-                                        update("district", district);
                                         update("ward", ward);
+                                        update("district", ""); // không còn dùng
                                     }}
                                     required
                                 />
@@ -414,7 +557,27 @@ export default function PostPage() {
                                     setLatitude(val.latitude);
                                     setLongitude(val.longitude);
                                 }}
-                                onReverseGeocode={() => {}}
+                                onReverseGeocode={(data) => {
+                                    // Đổ dữ liệu từ reverse geocode vào form
+                                    if (data.city) update("city", data.city);
+                                    if (data.ward) {
+                                        const normalizedWard = data.ward
+                                            .replace(/^phường\s+/i, "")
+                                            .replace(/^xã\s+/i, "")
+                                            .replace(/^thị trấn\s+/i, "")
+                                            .trim();
+                                        update("ward", normalizedWard || data.ward);
+                                    } else if (data.district) {
+                                        // Hậu thuẫn cho dữ liệu cũ
+                                        const normalizedWard = data.district
+                                            .replace(/^phường\s+/i, "")
+                                            .replace(/^xã\s+/i, "")
+                                            .replace(/^thị trấn\s+/i, "")
+                                            .trim();
+                                        update("ward", normalizedWard || data.district);
+                                    }
+                                    if (data.address_detail) update("address_detail", data.address_detail);
+                                }}
                             />
                         </div>
                     )}

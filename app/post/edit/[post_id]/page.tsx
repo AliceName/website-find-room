@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useEffect, use, useMemo } from "react";
+import { useState, useEffect, use } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import ImageUploader from "@/components/common/ImageUploader";
 import VietnamAddressSelect from "@/components/common/VietnamAddressSelect";
 import PostLocationPicker from "@/components/map/PostLocationPicker";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { AlertCircle, X } from "lucide-react";
+import { validateFinalPostInput, buildValidationMessage } from "@/lib/validation/postValidation";
 
 const ROOM_TYPES = [
     { value: "phong_tro", label: "Phòng trọ" },
@@ -31,6 +33,88 @@ interface FormData {
     room_description: string;
     vr_url: string;
     room_status: boolean;
+}
+
+function getErrorMessages(error: string): string[] {
+    return error
+        .replace(/^Đăng tin thất bại:\s*/i, "")
+        .split("\n")
+        .map((message) => message.trim())
+        .filter(Boolean);
+}
+
+function ValidationMessageBox({ error, onClose }: { error: string; onClose: () => void }) {
+    const messages = getErrorMessages(error);
+
+    return (
+        <div
+            role="alert"
+            aria-modal="true"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 py-6 backdrop-blur-sm"
+        >
+            <div className="relative w-full max-w-lg overflow-hidden rounded-[28px] border border-white/70 bg-white text-slate-900 shadow-[0_30px_90px_rgba(15,23,42,0.28)]">
+                <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-red-500 via-orange-400 to-amber-400" />
+                <button
+                    type="button"
+                    onClick={onClose}
+                    aria-label="Đóng thông báo lỗi"
+                    className="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/85 text-slate-500 shadow-sm ring-1 ring-slate-200 transition hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-4 focus:ring-red-100"
+                >
+                    <X className="h-4 w-4" />
+                </button>
+
+                <div className="bg-gradient-to-br from-red-50 via-white to-amber-50 px-6 pb-5 pt-7">
+                    <div className="flex items-start gap-4 pr-10">
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-red-600 text-white shadow-lg shadow-red-200">
+                            <AlertCircle className="h-7 w-7" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-xl font-black tracking-tight text-slate-950">Thông tin chưa hợp lệ</p>
+                            <p className="mt-1 text-sm font-medium leading-6 text-slate-600">
+                                Vui lòng sửa các mục bên dưới trước khi tiếp tục.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="px-6 pb-6 pt-4">
+                    <div className="rounded-2xl border border-red-100 bg-red-50/70 p-4">
+                        <div className="space-y-2 text-sm font-semibold leading-6 text-red-900">
+                            {messages.length > 1 ? (
+                                <ul className="space-y-2">
+                                    {messages.map((message, index) => (
+                                        <li key={message} className="flex gap-3">
+                                            <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-xs font-black text-red-600 ring-1 ring-red-100">
+                                                {index + 1}
+                                            </span>
+                                            <span className="min-w-0 flex-1">{message}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <div className="flex gap-3">
+                                    <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-xs font-black text-red-600 ring-1 ring-red-100">
+                                        !
+                                    </span>
+                                    <p className="min-w-0 flex-1">{messages[0] || "Vui lòng kiểm tra lại thông tin đã nhập."}</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="mt-5 flex justify-end">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-200 transition hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-200"
+                        >
+                            Tôi đã hiểu
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 }
 
 export default function EditPostPage({ params }: { params: Promise<{ post_id: string }> }) {
@@ -146,8 +230,8 @@ export default function EditPostPage({ params }: { params: Promise<{ post_id: st
     const update = (key: keyof FormData, value: string | boolean) =>
         setForm(prev => ({ ...prev, [key]: value }));
 
-    const handleAddressChange = (city: string, district: string, ward: string) => {
-        setForm(prev => ({ ...prev, city, district, ward }));
+    const handleAddressChange = (city: string, ward: string) => {
+        setForm(prev => ({ ...prev, city, district: "", ward }));
     };
 
     const handleLocationChange = (value: { latitude: number | null; longitude: number | null }) => {
@@ -189,19 +273,28 @@ export default function EditPostPage({ params }: { params: Promise<{ post_id: st
         setSuccess(null);
 
         try {
-            if (!form.post_title.trim()) throw new Error("Vui lòng nhập tiêu đề bài đăng.");
-            if (!form.room_price || Number(form.room_price) <= 0) throw new Error("Vui lòng nhập giá thuê hợp lệ.");
-            if (!form.room_area || Number(form.room_area) <= 0) throw new Error("Vui lòng nhập diện tích hợp lệ.");
-            if (!form.room_description.trim()) throw new Error("Vui lòng nhập mô tả căn phòng.");
-            if (!form.city.trim()) throw new Error("Vui lòng chọn tỉnh / thành phố.");
-            if (!form.district.trim()) throw new Error("Vui lòng chọn quận / huyện.");
-            if (!form.ward.trim()) throw new Error("Vui lòng chọn phường / xã.");
-            if (latitude === null || longitude === null) throw new Error("Vui lòng chọn vị trí trên mini map.");
+            const validation = validateFinalPostInput({
+                post_title: form.post_title,
+                room_type: form.room_type,
+                room_price: form.room_price,
+                room_area: form.room_area,
+                city: form.city,
+                district: form.district,
+                ward: form.ward,
+                latitude,
+                longitude,
+                room_description: form.room_description,
+                vr_url: form.vr_url,
+            });
+
+            if (!validation.ok) {
+                throw new Error(buildValidationMessage(validation.errors));
+            }
 
             if (locationId) {
                 const { error: locErr } = await supabase
                     .from("locations")
-                    .update({ city: form.city, district: form.district, ward: form.ward })
+                    .update({ city: form.city, district: null, ward: form.ward })
                     .eq("location_id", locationId);
                 if (locErr) throw new Error("Lỗi cập nhật địa điểm: " + locErr.message);
             }
@@ -224,7 +317,7 @@ export default function EditPostPage({ params }: { params: Promise<{ post_id: st
                         room_status: form.room_status,
                         vr_url: form.vr_url || null,
                         address_detail: form.address_detail || null,
-                        full_address: [form.address_detail, form.ward, form.district, form.city].filter(Boolean).join(", "),
+                        full_address: [form.address_detail, form.ward, form.city].filter(Boolean).join(", "),
                         latitude,
                         longitude,
                     })
@@ -270,12 +363,7 @@ export default function EditPostPage({ params }: { params: Promise<{ post_id: st
                     <h1 className="text-3xl font-black text-gray-900 mt-3 tracking-tight">Sửa bài đăng</h1>
                 </div>
 
-                {error && (
-                    <div className="mb-6 bg-red-50 border border-red-100 rounded-2xl p-4 flex items-start gap-3">
-                        <span className="text-red-500 text-lg">⚠️</span>
-                        <p className="text-red-600 text-sm font-medium">{error}</p>
-                    </div>
-                )}
+                {error && <ValidationMessageBox error={error} onClose={() => setError(null)} />}
                 {success && (
                     <div className="mb-6 bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex items-start gap-3">
                         <span className="text-emerald-600 text-lg">✅</span>
@@ -324,7 +412,12 @@ export default function EditPostPage({ params }: { params: Promise<{ post_id: st
                         <div>
                             <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Giá thuê (đ/tháng)</label>
                             <input type="number" value={form.room_price} onChange={e => update("room_price", e.target.value)}
-                                placeholder="3000000" className={inputCls} />
+                                placeholder="3.000.000" className={inputCls} />
+                            {form.room_price && !Number.isNaN(Number(form.room_price)) && (
+                                <p className="mt-2 text-sm text-slate-500">
+                                    Đã nhập: {Number(form.room_price).toLocaleString("vi-VN")} đ/tháng
+                                </p>
+                            )}
                         </div>
                         <div>
                             <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Diện tích (m²)</label>
