@@ -137,7 +137,10 @@ export default function Navbar() {
                                 <NavLink href="/favorites" active={pathname === "/favorites"}>❤️ Đã lưu</NavLink>
                                 <NavLink href="/manage-posts" active={pathname === "/manage-posts"}>Quản lý</NavLink>
                                 {userRole === 'admin' && (
-                                    <NavLink href="/admin/reports" active={pathname?.startsWith("/admin/reports")}>🛡️ Report</NavLink>
+                                    <>
+                                        <NavLink href="/admin/reports" active={pathname?.startsWith("/admin/reports")}>Admin Report</NavLink>
+                                        <NavLink href="/admin/bans" active={pathname?.startsWith("/admin/bans")}>Khóa TK</NavLink>
+                                    </>
                                 )}
                                 <NavLink href="/profile" active={pathname === "/profile"}>Hồ sơ</NavLink>
                                 <button
@@ -210,7 +213,10 @@ export default function Navbar() {
                             <MobileNavLink href="/favorites" active={pathname === "/favorites"} onClick={() => setMobileOpen(false)}>❤️ Tin đã lưu</MobileNavLink>
                             <MobileNavLink href="/manage-posts" active={pathname === "/manage-posts"} onClick={() => setMobileOpen(false)}>📋 Quản lý bài đăng</MobileNavLink>
                             {userRole === 'admin' && (
-                                <MobileNavLink href="/admin/reports" active={pathname?.startsWith("/admin/reports")} onClick={() => setMobileOpen(false)}>🛡️ Report</MobileNavLink>
+                                <>
+                                    <MobileNavLink href="/admin/reports" active={pathname?.startsWith("/admin/reports")} onClick={() => setMobileOpen(false)}>Admin Report</MobileNavLink>
+                                    <MobileNavLink href="/admin/bans" active={pathname?.startsWith("/admin/bans")} onClick={() => setMobileOpen(false)}>Khóa tài khoản</MobileNavLink>
+                                </>
                             )}
                             <MobileNavLink href="/profile" active={pathname === "/profile"} onClick={() => setMobileOpen(false)}>👤 Hồ sơ của tôi</MobileNavLink>
                             <button

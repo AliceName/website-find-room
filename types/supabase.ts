@@ -23,6 +23,44 @@ export interface Database {
           amenity_name?: string
         }
       }
+      ban_appeals: {
+        Row: {
+          appeal_id: string
+          user_id: string
+          contact_email: string
+          message: string
+          status: "pending" | "approved" | "rejected"
+          admin_note: string | null
+          reviewed_by: string | null
+          reviewed_at: string | null
+          created_at: string
+          updated_at: string | null
+        }
+        Insert: {
+          appeal_id?: string
+          user_id: string
+          contact_email: string
+          message: string
+          status?: "pending" | "approved" | "rejected"
+          admin_note?: string | null
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          created_at?: string
+          updated_at?: string | null
+        }
+        Update: {
+          appeal_id?: string
+          user_id?: string
+          contact_email?: string
+          message?: string
+          status?: "pending" | "approved" | "rejected"
+          admin_note?: string | null
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          created_at?: string
+          updated_at?: string | null
+        }
+      }
       conversations: {
         Row: {
           conversation_id: string
