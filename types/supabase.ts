@@ -300,6 +300,9 @@ export interface Database {
           room_id: string | null
           rating: number | null
           comment: string | null
+          owner_reply: string | null
+          owner_reply_at: string | null
+          owner_reply_user_id: string | null
           review_created_at: string | null
           review_updated_at: string | null
         }
@@ -309,6 +312,9 @@ export interface Database {
           room_id?: string | null
           rating?: number | null
           comment?: string | null
+          owner_reply?: string | null
+          owner_reply_at?: string | null
+          owner_reply_user_id?: string | null
           review_created_at?: string | null
           review_updated_at?: string | null
         }
@@ -318,6 +324,9 @@ export interface Database {
           room_id?: string | null
           rating?: number | null
           comment?: string | null
+          owner_reply?: string | null
+          owner_reply_at?: string | null
+          owner_reply_user_id?: string | null
           review_created_at?: string | null
           review_updated_at?: string | null
         }
