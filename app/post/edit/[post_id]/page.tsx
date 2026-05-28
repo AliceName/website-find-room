@@ -269,7 +269,7 @@ export default function EditPostPage({ params }: { params: Promise<{ post_id: st
     };
 
     const handleResetPin = async () => {
-        const query = [form.city, form.district, form.ward, form.address_detail].filter(Boolean).join(", ");
+        const query = [form.address_detail, form.ward || form.district, form.city].filter(Boolean).join(", ");
         if (!query) return;
 
         const res = await fetch(`/api/geocode?q=${encodeURIComponent(query)}`);
@@ -304,12 +304,28 @@ export default function EditPostPage({ params }: { params: Promise<{ post_id: st
                 throw new Error(buildValidationMessage(validation.errors));
             }
 
+            let nextLocationId = locationId;
+
             if (locationId) {
-                const { error: locErr } = await supabase
+                const { data: updatedLocation, error: locErr } = await supabase
                     .from("locations")
                     .update({ city: form.city, district: null, ward: form.ward })
-                    .eq("location_id", locationId);
+                    .eq("location_id", locationId)
+                    .select("location_id")
+                    .maybeSingle();
                 if (locErr) throw new Error("Lỗi cập nhật địa điểm: " + locErr.message);
+                nextLocationId = updatedLocation?.location_id ?? null;
+            }
+
+            if (!nextLocationId) {
+                const { data: createdLocation, error: createLocErr } = await supabase
+                    .from("locations")
+                    .insert({ city: form.city, district: null, ward: form.ward })
+                    .select("location_id")
+                    .single();
+                if (createLocErr) throw new Error("Lỗi tạo địa điểm mới: " + createLocErr.message);
+                nextLocationId = createdLocation.location_id;
+                setLocationId(nextLocationId);
             }
 
             const roomTypeLabel = ROOM_TYPES.find(t => t.value === form.room_type)?.label ?? "";
@@ -327,6 +343,7 @@ export default function EditPostPage({ params }: { params: Promise<{ post_id: st
                         room_area: Number(form.room_area),
                         room_description: form.room_description,
                         room_type_id: typeData?.room_type_id ?? null,
+                        location_id: nextLocationId,
                         room_status: form.room_status,
                         vr_url: form.vr_url || null,
                         address_detail: form.address_detail || null,

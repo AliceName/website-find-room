@@ -31,7 +31,7 @@ export default function PostCard({ post }: PostCardProps) {
 
     const location = post.rooms?.locations;
     const locationText = location
-        ? [location.district, location.city].filter(Boolean).join(", ")
+        ? [location.ward || location.district, location.city].filter(Boolean).join(", ")
         : "TP. Hồ Chí Minh";
 
     const hasVR = !!(
