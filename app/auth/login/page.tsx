@@ -81,14 +81,16 @@ export default function LoginPage() {
         setForgotLoading(true);
         setError(null);
 
+        const redirectTo = `${window.location.origin}/auth/reset-password`;
+
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: `${window.location.origin}/auth/reset-password`,
+            redirectTo,
         });
 
         if (error) {
-            setError(error.message);
+            setError(error.message || "Không thể gửi email đặt lại mật khẩu. Vui lòng thử lại.");
         } else {
-            setSuccess("Đã gửi email đặt lại mật khẩu.");
+            setSuccess("Đã gửi email đặt lại mật khẩu. Vui lòng kiểm tra hộp thư của bạn.");
             setForgotMode(false);
         }
         setForgotLoading(false);
