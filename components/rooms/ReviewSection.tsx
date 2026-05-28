@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 
 interface Review {
     review_id: string;
+    user_id: string | null;
     rating: number | null;
     comment: string | null;
     review_created_at: string | null;
@@ -39,6 +40,7 @@ export default function ReviewSection({ roomId }: ReviewSectionProps) {
         fetchReviews();
         supabase.auth.getUser().then(async ({ data: { user } }) => {
             setUser(user);
+            setUserReview(null);
             if (!user) {
                 setIsOwner(false);
                 return;
@@ -57,7 +59,7 @@ export default function ReviewSection({ roomId }: ReviewSectionProps) {
         const { data } = await supabase
             .from("reviews")
             .select(`
-                review_id, rating, comment, review_created_at, owner_reply, owner_reply_at, owner_reply_user_id,
+                review_id, user_id, rating, comment, review_created_at, owner_reply, owner_reply_at, owner_reply_user_id,
                 users:user_id ( user_name )
             `)
             .eq("room_id", roomId)
@@ -70,17 +72,17 @@ export default function ReviewSection({ roomId }: ReviewSectionProps) {
     };
 
     useEffect(() => {
-        if (user && reviews.length > 0) {
-            // Check if user already reviewed - we do a separate query
-            checkUserReview();
-        }
+        checkUserReview();
     }, [user, roomId]);
 
     const checkUserReview = async () => {
-        if (!user) return;
+        if (!user) {
+            setUserReview(null);
+            return;
+        }
         const { data } = await supabase
             .from("reviews")
-            .select("review_id, rating, comment, review_created_at")
+            .select("review_id, user_id, rating, comment, review_created_at")
             .eq("room_id", roomId)
             .eq("user_id", user.id)
             .maybeSingle();
@@ -89,6 +91,10 @@ export default function ReviewSection({ roomId }: ReviewSectionProps) {
             setUserReview(data as any);
             setRating(data.rating || 5);
             setComment(data.comment || "");
+        } else {
+            setUserReview(null);
+            setRating(5);
+            setComment("");
         }
     };
 
@@ -99,6 +105,10 @@ export default function ReviewSection({ roomId }: ReviewSectionProps) {
     const handleSubmit = async () => {
         if (!user) {
             window.location.href = "/auth/login";
+            return;
+        }
+        if (isOwner) {
+            setError("Chủ bài đăng không thể tự đánh giá bài đăng của mình.");
             return;
         }
         if (!comment.trim()) {
@@ -115,7 +125,8 @@ export default function ReviewSection({ roomId }: ReviewSectionProps) {
                 const { error: err } = await supabase
                     .from("reviews")
                     .update({ rating, comment, review_updated_at: new Date().toISOString() })
-                    .eq("review_id", userReview.review_id);
+                    .eq("review_id", userReview.review_id)
+                    .eq("user_id", user.id);
                 if (err) throw err;
                 setSuccess("Cập nhật đánh giá thành công!");
             } else {
@@ -138,10 +149,10 @@ export default function ReviewSection({ roomId }: ReviewSectionProps) {
     };
 
     const handleDelete = async () => {
-        if (!userReview) return;
+        if (!user || !userReview || isOwner) return;
         if (!confirm("Bạn có chắc muốn xóa đánh giá này?")) return;
 
-        await supabase.from("reviews").delete().eq("review_id", userReview.review_id);
+        await supabase.from("reviews").delete().eq("review_id", userReview.review_id).eq("user_id", user.id);
         setUserReview(null);
         setRating(5);
         setComment("");
@@ -150,6 +161,11 @@ export default function ReviewSection({ roomId }: ReviewSectionProps) {
 
     const handleOwnerReply = async (reviewId: string) => {
         if (!user || !isOwner) return;
+        const targetReview = reviews.find((review) => review.review_id === reviewId);
+        if (!targetReview || targetReview.user_id === user.id) {
+            setError("Chủ bài đăng không thể phản hồi đánh giá của chính mình.");
+            return;
+        }
         const reply = (replyDraftByReviewId[reviewId] || "").trim();
         if (!reply) {
             setError("Vui lòng nhập nội dung phản hồi.");
@@ -166,7 +182,8 @@ export default function ReviewSection({ roomId }: ReviewSectionProps) {
                     owner_reply_at: new Date().toISOString(),
                     owner_reply_user_id: user.id,
                 })
-                .eq("review_id", reviewId);
+                .eq("review_id", reviewId)
+                .eq("room_id", roomId);
 
             if (updateError) throw updateError;
 
@@ -244,13 +261,21 @@ export default function ReviewSection({ roomId }: ReviewSectionProps) {
             </div>
 
             {/* Write Review Button */}
-            {user && !showForm && (
+            {user && !isOwner && !showForm && (
                 <button
                     onClick={() => setShowForm(true)}
                     className="w-full rounded-2xl border-2 border-dashed border-yellow-300 bg-yellow-50 py-4 text-sm font-bold text-yellow-700 transition-all duration-[180ms] ease-[var(--ease-out-quart)] hover:bg-yellow-100 active:scale-[0.99]"
                 >
                     {userReview ? "✏️ Sửa đánh giá của bạn" : "✍️ Viết đánh giá"}
                 </button>
+            )}
+
+            {user && isOwner && (
+                <div className="rounded-2xl bg-blue-50 py-4 text-center">
+                    <p className="px-4 text-sm font-medium text-blue-700">
+                        Bạn là chủ bài đăng nên không thể tự đánh giá. Bạn có thể phản hồi đánh giá của người thuê bên dưới.
+                    </p>
+                </div>
             )}
 
             {!user && (
@@ -263,7 +288,7 @@ export default function ReviewSection({ roomId }: ReviewSectionProps) {
             )}
 
             {/* Review Form */}
-            {showForm && user && (
+            {showForm && user && !isOwner && (
                 <div className="space-y-4 rounded-3xl border-2 border-yellow-200 bg-yellow-50 p-6">
                     <h3 className="font-black text-slate-800">{userReview ? "Sửa đánh giá" : "Viết đánh giá"}</h3>
 
@@ -368,7 +393,7 @@ export default function ReviewSection({ roomId }: ReviewSectionProps) {
                                     </div>
                                 )}
 
-                                {isOwner && (!review.owner_reply || review.owner_reply_user_id === user?.id) && (
+                                {isOwner && review.user_id !== user?.id && (!review.owner_reply || review.owner_reply_user_id === user?.id) && (
                                     <div className="mt-3 space-y-2 rounded-xl border border-slate-200 bg-white p-3">
                                         <p className="text-xs font-bold uppercase tracking-wide text-slate-600">Phản hồi đánh giá</p>
                                         <textarea

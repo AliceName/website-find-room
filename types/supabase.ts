@@ -178,33 +178,33 @@ export interface Database {
       }
       reviews: {
         Row: {
-          review_id: string;
-          user_id: string | null;
-          room_id: string | null;
-          rating: number | null;
-          comment: string | null;
-          review_created_at: string | null;
-          review_updated_at: string | null;
-        };
+          review_id: string
+          user_id: string | null
+          room_id: string | null
+          rating: number | null
+          comment: string | null
+          review_created_at: string | null
+          review_updated_at: string | null
+        }
         Insert: {
-          review_id?: string;
-          user_id?: string | null;
-          room_id?: string | null;
-          rating?: number | null;
-          comment?: string | null;
-          review_created_at?: string | null;
-          review_updated_at?: string | null;
-        };
+          review_id?: string
+          user_id?: string | null
+          room_id?: string | null
+          rating?: number | null
+          comment?: string | null
+          review_created_at?: string | null
+          review_updated_at?: string | null
+        }
         Update: {
-          review_id?: string;
-          user_id?: string | null;
-          room_id?: string | null;
-          rating?: number | null;
-          comment?: string | null;
-          review_created_at?: string | null;
-          review_updated_at?: string | null;
-        };
-      };
+          review_id?: string
+          user_id?: string | null
+          room_id?: string | null
+          rating?: number | null
+          comment?: string | null
+          review_created_at?: string | null
+          review_updated_at?: string | null
+        }
+      }
       roomamenities: {
         Row: {
           room_amenities_id: string;
