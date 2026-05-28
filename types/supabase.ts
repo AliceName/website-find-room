@@ -43,6 +43,67 @@ export interface Database {
           amenity_name?: string
         }
       }
+      conversations: {
+        Row: {
+          conversation_id: string
+          renter_id: string
+          owner_id: string
+          post_id: string | null
+          room_id: string | null
+          retention_policy: "manual" | "3_days" | "7_days" | "30_days" | "forever"
+          expires_at: string | null
+          last_message_at: string | null
+          created_at: string
+          updated_at: string | null
+        }
+        Insert: {
+          conversation_id?: string
+          renter_id: string
+          owner_id: string
+          post_id?: string | null
+          room_id?: string | null
+          retention_policy?: "manual" | "3_days" | "7_days" | "30_days" | "forever"
+          expires_at?: string | null
+          last_message_at?: string | null
+          created_at?: string
+          updated_at?: string | null
+        }
+        Update: {
+          conversation_id?: string
+          renter_id?: string
+          owner_id?: string
+          post_id?: string | null
+          room_id?: string | null
+          retention_policy?: "manual" | "3_days" | "7_days" | "30_days" | "forever"
+          expires_at?: string | null
+          last_message_at?: string | null
+          created_at?: string
+          updated_at?: string | null
+        }
+      }
+      conversation_user_states: {
+        Row: {
+          conversation_id: string
+          user_id: string
+          state: "hidden" | "deleted"
+          created_at: string
+          updated_at: string | null
+        }
+        Insert: {
+          conversation_id: string
+          user_id: string
+          state: "hidden" | "deleted"
+          created_at?: string
+          updated_at?: string | null
+        }
+        Update: {
+          conversation_id?: string
+          user_id?: string
+          state?: "hidden" | "deleted"
+          created_at?: string
+          updated_at?: string | null
+        }
+      }
       favorites: {
         Row: {
           favority_id: string;

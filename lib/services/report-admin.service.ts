@@ -175,6 +175,15 @@ export class ReportAdminService {
     }
 
     if (input.severity === 3 && input.ownerUserId) {
+      const { error: hideOwnerRoomsError } = await supabase
+        .from("rooms")
+        .update({ is_hidden: true })
+        .eq("owner_id", input.ownerUserId);
+
+      if (hideOwnerRoomsError) {
+        throw new Error(`Đã xử lý report nhưng không thể ẩn toàn bộ bài đăng của tài khoản bị khóa: ${hideOwnerRoomsError.message}`);
+      }
+
       const { error: banError } = await supabase
         .from("users")
         .update({

@@ -18,6 +18,7 @@ export default function LoginPage() {
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
     const [forgotMode, setForgotMode] = useState(false);
+    const [showBanAppealLink, setShowBanAppealLink] = useState(false);
 
     useEffect(() => {
         if (!success && !error) return;
@@ -33,6 +34,7 @@ export default function LoginPage() {
         setLoading(true);
         setError(null);
         setSuccess(null);
+        setShowBanAppealLink(false);
 
         const { data: signInData, error } = await supabase.auth.signInWithPassword({ email, password });
 
@@ -59,6 +61,7 @@ export default function LoginPage() {
             if (profile?.is_banned) {
                 await supabase.auth.signOut({ scope: "local" });
                 setError(profile.ban_reason || "Tài khoản đã bị khóa.");
+                setShowBanAppealLink(true);
                 setLoading(false);
                 return;
             }
@@ -191,6 +194,11 @@ export default function LoginPage() {
                                 className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
                             >
                                 {error}
+                                {showBanAppealLink && (
+                                    <Link href={`/ban-appeal?email=${encodeURIComponent(email)}`} className="mt-3 block font-bold text-red-800 underline underline-offset-4">
+                                        Gửi yêu cầu mở lại tài khoản
+                                    </Link>
+                                )}
                             </motion.div>
                         )}
                         {success && (
