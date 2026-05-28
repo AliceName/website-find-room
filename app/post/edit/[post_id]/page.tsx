@@ -200,9 +200,9 @@ export default function EditPostPage({ params }: { params: Promise<{ post_id: st
                     room_price: String(room.room_price || ""),
                     room_area: String(room.room_area || ""),
                     city: location?.city || "TP. Hồ Chí Minh",
-                    district: location?.district || "",
+                    district: "",
                     ward: location?.ward || "",
-                    address_detail: room.full_address || room.address_detail || "",
+                    address_detail: room.address_detail || "",
                     room_description: room.room_description || "",
                     vr_url: room.vr_url || "",
                     room_status: room.room_status !== false,
@@ -247,8 +247,21 @@ export default function EditPostPage({ params }: { params: Promise<{ post_id: st
         full_address?: string;
     }) => {
         if (data.city) setForm(prev => ({ ...prev, city: data.city ?? prev.city }));
-        if (data.district) setForm(prev => ({ ...prev, district: data.district ?? prev.district }));
-        if (data.ward) setForm(prev => ({ ...prev, ward: data.ward ?? prev.ward }));
+        if (data.ward) {
+            const normalizedWard = data.ward
+                .replace(/^phường\s+/i, "")
+                .replace(/^xã\s+/i, "")
+                .replace(/^thị trấn\s+/i, "")
+                .trim();
+            setForm(prev => ({ ...prev, district: "", ward: normalizedWard || data.ward || prev.ward }));
+        } else if (data.district) {
+            const normalizedWard = data.district
+                .replace(/^phường\s+/i, "")
+                .replace(/^xã\s+/i, "")
+                .replace(/^thị trấn\s+/i, "")
+                .trim();
+            setForm(prev => ({ ...prev, district: "", ward: normalizedWard || data.district || prev.ward }));
+        }
         if (data.address_detail) {
             setForm(prev => ({ ...prev, address_detail: data.address_detail ?? prev.address_detail }));
             setAddressDetailHint(data.address_detail);

@@ -64,8 +64,8 @@ export default function VietnamAddressSelect({
     useEffect(() => {
         if (!city || provinces.length === 0) return;
         const found = provinces.find((p) => {
-            const provinceName = p.name.toLowerCase();
-            const cityName = city.toLowerCase();
+            const provinceName = normalizeAdministrativeName(p.name);
+            const cityName = normalizeAdministrativeName(city);
             return provinceName === cityName || provinceName.includes(cityName) || cityName.includes(provinceName);
         });
         if (found && found.code !== selectedProvinceCode) {
