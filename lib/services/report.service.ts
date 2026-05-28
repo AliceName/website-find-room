@@ -46,14 +46,27 @@ export type ReportWithRelations = PostReportRow & {
 };
 
 export type ReportActionRow = Database["public"]["Tables"]["post_report_actions"]["Row"];
+export type PostReportSummary = PostReportRow & {
+  actions?: ReportActionRow[];
+};
 
 export class ReportService {
-  static async getMyReportForPost(postId: string, userId: string): Promise<PostReportRow | null> {
+  static async getMyReportForPost(
+    postIdOrInput: string | { postId: string; userId: string },
+    userId?: string,
+  ): Promise<PostReportSummary | null> {
+    const postId = typeof postIdOrInput === "string" ? postIdOrInput : postIdOrInput.postId;
+    const reporterUserId = typeof postIdOrInput === "string" ? userId : postIdOrInput.userId;
+
+    if (!reporterUserId) {
+      throw new Error("Thiáº¿u thÃ´ng tin ngÆ°á»i bÃ¡o cÃ¡o.");
+    }
+
     const { data, error } = await supabase
       .from("post_reports")
       .select("*")
       .eq("post_id", postId)
-      .eq("reporter_user_id", userId)
+      .eq("reporter_user_id", reporterUserId)
       .order("report_created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -63,6 +76,16 @@ export class ReportService {
     }
 
     return data ?? null;
+  }
+
+  static async submitReport(input: {
+    postId: string;
+    reporterUserId: string;
+    reasonCodes: ReportReasonCode[];
+    reasonDetail?: string;
+  }): Promise<PostReportSummary> {
+    const result = await this.createReport(input);
+    return result.report;
   }
 
   static async createReport(input: {

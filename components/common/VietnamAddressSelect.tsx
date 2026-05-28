@@ -1,276 +1,198 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import { ChevronDown, Loader2 } from "lucide-react";
+import { normalizeAdministrativeName } from "@/lib/utils/addressNormalization";
 
-const API_BASE = "https://provinces.open-api.vn/api";
+// API địa giới hành chính v2: Tỉnh/Thành → Phường/Xã
+const API_BASE = "https://provinces.open-api.vn/api/v2";
 
-type Ward = {
-  name: string;
-  code: number;
-  division_type: string;
-  codename: string;
-  district_code: number;
-};
-
-type District = {
-  name: string;
-  code: number;
-  division_type: string;
-  codename: string;
-  province_code: number;
-  wards?: Ward[];
-};
-
-type Province = {
-  name: string;
-  code: number;
-  division_type: string;
-  codename: string;
-  phone_code: number;
-  districts?: District[];
-};
-
-interface VietnamAddressSelectProps {
-  city?: string;
-  district?: string;
-  ward?: string;
-  onAddressChange?: (city: string, district: string, ward: string) => void;
-  externalAddress?: {
-    city?: string;
-    district?: string;
-    ward?: string;
-    address_detail?: string;
-  } | null;
-  required?: boolean;
+interface Province {
+    code: string;
+    name: string;
+    type: string;
 }
 
-const selectCls =
-  "w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3.5 text-sm font-medium text-gray-800 " +
-  "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all " +
-  "disabled:opacity-50 disabled:cursor-not-allowed appearance-none cursor-pointer";
+interface Ward {
+    code: string;
+    name: string;
+    province_code: string;
+}
 
-function Spinner() {
-  return <span className="inline-block w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />;
+interface Props {
+    city: string;       // tỉnh/thành
+    district: string;   // giữ prop để tương thích, không dùng
+    ward?: string;      // phường/xã — cấp 2 mới
+    onAddressChange: (city: string, ward: string) => void;
+    required?: boolean;
 }
 
 export default function VietnamAddressSelect({
-  city = "",
-  district = "",
-  ward = "",
-  onAddressChange,
-  externalAddress = null,
-  required = false,
-}: VietnamAddressSelectProps) {
-  const [provinces, setProvinces] = useState<Province[]>([]);
-  const [districts, setDistricts] = useState<District[]>([]);
-  const [wards, setWards] = useState<Ward[]>([]);
+    city,
+    ward = "",
+    onAddressChange,
+    required,
+}: Props) {
+    const [provinces, setProvinces] = useState<Province[]>([]);
+    const [wards, setWards] = useState<Ward[]>([]);
+    const [selectedProvinceCode, setSelectedProvinceCode] = useState<string>("");
+    const [loadingProvinces, setLoadingProvinces] = useState(false);
+    const [loadingWards, setLoadingWards] = useState(false);
+    const [loadError, setLoadError] = useState<string | null>(null);
 
-  const [selectedProvince, setSelectedProvince] = useState<Province | null>(null);
-  const [selectedDistrict, setSelectedDistrict] = useState<District | null>(null);
-  const [selectedWard, setSelectedWard] = useState<Ward | null>(null);
+    // Load 34 tỉnh/thành khi mount
+    useEffect(() => {
+        const fetchProvinces = async () => {
+            setLoadingProvinces(true);
+            setLoadError(null);
+            try {
+                const res = await fetch(`${API_BASE}/p?depth=1`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data: Province[] = await res.json();
+                setProvinces(Array.isArray(data) ? data : []);
+            } catch (err) {
+                console.error("Lỗi tải tỉnh/thành:", err);
+                setLoadError("Không tải được danh sách tỉnh/thành.");
+            } finally {
+                setLoadingProvinces(false);
+            }
+        };
+        fetchProvinces();
+    }, []);
 
-  const [loadingProvinces, setLoadingProvinces] = useState(false);
-  const [loadingDistricts, setLoadingDistricts] = useState(false);
-  const [loadingWards, setLoadingWards] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+    // Khi city thay đổi từ bên ngoài, sync lại code
+    useEffect(() => {
+        if (!city || provinces.length === 0) return;
+        const found = provinces.find((p) => {
+            const provinceName = p.name.toLowerCase();
+            const cityName = city.toLowerCase();
+            return provinceName === cityName || provinceName.includes(cityName) || cityName.includes(provinceName);
+        });
+        if (found && found.code !== selectedProvinceCode) {
+            setSelectedProvinceCode(found.code);
+        }
+    }, [city, provinces, selectedProvinceCode]);
 
-  useEffect(() => {
-    const fetchProvinces = async () => {
-      setLoadingProvinces(true);
-      setError(null);
-      try {
-        const res = await fetch(`${API_BASE}/?depth=2`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data: Province[] = await res.json();
-        setProvinces(data);
-      } catch (err) {
-        setError("Không thể tải danh sách tỉnh/thành phố. Vui lòng thử lại.");
-        console.error("Load provinces error:", err);
-      } finally {
-        setLoadingProvinces(false);
-      }
+    // Load phường/xã khi chọn tỉnh
+    useEffect(() => {
+        if (!selectedProvinceCode) {
+            setWards([]);
+            return;
+        }
+        const fetchWards = async () => {
+            setLoadingWards(true);
+            setLoadError(null);
+            try {
+                const res = await fetch(`${API_BASE}/p/${selectedProvinceCode}?depth=2`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                const rawWards = Array.isArray(data?.wards) ? data.wards : [];
+                const filtered = rawWards.map((w: any) => ({
+                    code: String(w.code),
+                    name: w.name,
+                    province_code: String(selectedProvinceCode),
+                }));
+                console.log("[VietnamAddressSelect] wards loaded", {
+                    selectedProvinceCode,
+                    responseKeys: data ? Object.keys(data) : [],
+                    wardsCount: rawWards.length,
+                    sampleWard: rawWards[0] ?? null,
+                });
+                setWards(filtered);
+            } catch (err) {
+                console.error("Lỗi tải phường/xã:", err);
+                setLoadError("Không tải được danh sách phường/xã.");
+                setWards([]);
+            } finally {
+                setLoadingWards(false);
+            }
+        };
+        fetchWards();
+    }, [selectedProvinceCode]);
+
+    const handleProvinceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const code = e.target.value;
+        const province = provinces.find((p) => p.code === code);
+        setSelectedProvinceCode(code);
+        setWards([]);
+        onAddressChange(province?.name ?? "", "");
     };
 
-    fetchProvinces();
-  }, []);
+    const handleWardChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const code = e.target.value;
+        const w = wards.find((wardItem) => wardItem.code === code);
+        onAddressChange(city, w?.name ?? "");
+    };
 
-  useEffect(() => {
-    if (provinces.length === 0) return;
+    const currentWardCode = wards.find((w) => normalizeAdministrativeName(w.name) === normalizeAdministrativeName(ward))?.code ?? "";
 
-    const effectiveCity = externalAddress?.city || city;
-    const found = provinces.find((p) => p.name === effectiveCity) ?? null;
-    setSelectedProvince(found);
-    setSelectedDistrict(null);
-    setSelectedWard(null);
-  }, [city, externalAddress?.city, provinces]);
+    return (
+        <div className="space-y-4">
+            {/* Tỉnh / Thành phố */}
+            <div>
+                <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">
+                    Tỉnh / Thành phố {required && <span className="text-red-500">*</span>}
+                </label>
+                <div className="relative">
+                    <select
+                        value={selectedProvinceCode}
+                        onChange={handleProvinceChange}
+                        disabled={loadingProvinces}
+                        className="w-full appearance-none rounded-2xl border border-sky-200 bg-white px-5 py-4 pr-12 focus:border-[#0EA5E9] focus:ring-4 focus:ring-sky-100 outline-none disabled:opacity-60 cursor-pointer"
+                    >
+                        <option value="">-- Chọn tỉnh / thành phố --</option>
+                        {provinces.map((p) => (
+                            <option key={p.code} value={p.code}>
+                                {p.name}
+                            </option>
+                        ))}
+                    </select>
+                    <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
+                        {loadingProvinces
+                            ? <Loader2 className="h-4 w-4 animate-spin" />
+                            : <ChevronDown className="h-4 w-4" />}
+                    </div>
+                </div>
+            </div>
 
-  const fetchDistricts = useCallback(async (provinceCode: number) => {
-    setLoadingDistricts(true);
-    setError(null);
-    setDistricts([]);
-    setWards([]);
-    try {
-      const res = await fetch(`${API_BASE}/p/${provinceCode}?depth=2`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data: Province = await res.json();
-      setDistricts(data.districts ?? []);
-    } catch (err) {
-      setError("Không thể tải danh sách quận/huyện. Vui lòng thử lại.");
-      console.error("Load districts error:", err);
-    } finally {
-      setLoadingDistricts(false);
-    }
-  }, []);
+            {loadError && (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                    {loadError}
+                </div>
+            )}
 
-  const fetchWards = useCallback(async (districtCode: number) => {
-    setLoadingWards(true);
-    setError(null);
-    setWards([]);
-    try {
-      const res = await fetch(`${API_BASE}/d/${districtCode}?depth=2`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data: District = await res.json();
-      setWards(data.wards ?? []);
-    } catch (err) {
-      setError("Không thể tải danh sách phường/xã. Vui lòng thử lại.");
-      console.error("Load wards error:", err);
-    } finally {
-      setLoadingWards(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (selectedProvince) {
-      fetchDistricts(selectedProvince.code);
-    } else {
-      setDistricts([]);
-      setSelectedDistrict(null);
-      setSelectedWard(null);
-    }
-  }, [selectedProvince, fetchDistricts]);
-
-  useEffect(() => {
-    if (districts.length === 0) return;
-
-    const effectiveDistrict = externalAddress?.district || district;
-    const found = districts.find((d) => d.name === effectiveDistrict) ?? null;
-    setSelectedDistrict(found);
-    setSelectedWard(null);
-  }, [district, externalAddress?.district, districts]);
-
-  useEffect(() => {
-    if (selectedDistrict) {
-      fetchWards(selectedDistrict.code);
-    } else {
-      setWards([]);
-      setSelectedWard(null);
-    }
-  }, [selectedDistrict, fetchWards]);
-
-  useEffect(() => {
-    if (wards.length === 0) return;
-
-    const effectiveWard = externalAddress?.ward || ward;
-    const found = wards.find((w) => w.name === effectiveWard) ?? null;
-    setSelectedWard(found);
-  }, [ward, externalAddress?.ward, wards]);
-
-  const handleProvinceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const code = Number(e.target.value);
-    const province = provinces.find((p) => p.code === code) ?? null;
-    setSelectedProvince(province);
-    setSelectedDistrict(null);
-    setSelectedWard(null);
-    onAddressChange?.(province?.name ?? "", "", "");
-  };
-
-  const handleDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const code = Number(e.target.value);
-    const dist = districts.find((d) => d.code === code) ?? null;
-    setSelectedDistrict(dist);
-    setSelectedWard(null);
-    onAddressChange?.(selectedProvince?.name ?? "", dist?.name ?? "", "");
-  };
-
-  const handleWardChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const code = Number(e.target.value);
-    const wardItem = wards.find((w) => w.code === code) ?? null;
-    setSelectedWard(wardItem);
-    onAddressChange?.(selectedProvince?.name ?? "", selectedDistrict?.name ?? "", wardItem?.name ?? "");
-  };
-
-  const addressPreview = [selectedWard?.name, selectedDistrict?.name, selectedProvince?.name].filter(Boolean).join(", ");
-  const externalPreview = externalAddress?.address_detail || [externalAddress?.ward, externalAddress?.district, externalAddress?.city].filter(Boolean).join(", ");
-
-  return (
-    <div className="space-y-4">
-      {error && (
-        <div className="bg-red-50 border border-red-100 rounded-2xl px-4 py-3 flex items-center gap-3 text-sm">
-          <span className="text-red-500 shrink-0">⚠️</span>
-          <span className="text-red-600 font-medium flex-1">{error}</span>
+            {/* Phường / Xã */}
+            <div>
+                <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">
+                    Phường / Xã {required && <span className="text-red-500">*</span>}
+                </label>
+                <div className="relative">
+                    <select
+                        value={currentWardCode}
+                        onChange={handleWardChange}
+                        disabled={!selectedProvinceCode || loadingWards}
+                        className="w-full appearance-none rounded-2xl border border-sky-200 bg-white px-5 py-4 pr-12 focus:border-[#0EA5E9] focus:ring-4 focus:ring-sky-100 outline-none disabled:opacity-60 cursor-pointer"
+                    >
+                        <option value="">
+                            {!selectedProvinceCode
+                                ? "-- Chọn tỉnh/thành trước --"
+                                : loadingWards
+                                ? "Đang tải..."
+                                : "-- Chọn phường / xã --"}
+                        </option>
+                        {wards.map((w) => (
+                            <option key={w.code} value={w.code}>
+                                {w.name}
+                            </option>
+                        ))}
+                    </select>
+                    <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
+                        {loadingWards
+                            ? <Loader2 className="h-4 w-4 animate-spin" />
+                            : <ChevronDown className="h-4 w-4" />}
+                    </div>
+                </div>
+            </div>
         </div>
-      )}
-
-      <div>
-        <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">
-          Tỉnh / Thành phố{required && <span className="text-red-500 ml-1">*</span>}
-        </label>
-        <div className="relative">
-          <select value={selectedProvince?.code ?? ""} onChange={handleProvinceChange} disabled={loadingProvinces} required={required} className={selectCls}>
-            <option value="">{loadingProvinces ? "Đang tải..." : "-- Chọn tỉnh / thành phố --"}</option>
-            {provinces.map((p) => (
-              <option key={p.code} value={p.code}>{p.name}</option>
-            ))}
-          </select>
-          <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center">
-            {loadingProvinces ? <Spinner /> : <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>}
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">
-          Quận / Huyện{required && <span className="text-red-500 ml-1">*</span>}
-        </label>
-        <div className="relative">
-          <select value={selectedDistrict?.code ?? ""} onChange={handleDistrictChange} disabled={!selectedProvince || loadingDistricts} required={required} className={selectCls}>
-            <option value="">{!selectedProvince ? "-- Chọn tỉnh/thành trước --" : loadingDistricts ? "Đang tải..." : `-- Chọn quận / huyện (${districts.length}) --`}</option>
-            {districts.map((d) => (
-              <option key={d.code} value={d.code}>{d.name}</option>
-            ))}
-          </select>
-          <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center">
-            {loadingDistricts ? <Spinner /> : <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>}
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">
-          Phường / Xã{required && <span className="text-red-500 ml-1">*</span>}
-        </label>
-        <div className="relative">
-          <select value={selectedWard?.code ?? ""} onChange={handleWardChange} disabled={!selectedDistrict || loadingWards} required={required} className={selectCls}>
-            <option value="">{!selectedDistrict ? "-- Chọn quận / huyện trước --" : loadingWards ? "Đang tải..." : `-- Chọn phường / xã (${wards.length}) --`}</option>
-            {wards.map((w) => (
-              <option key={w.code} value={w.code}>{w.name}</option>
-            ))}
-          </select>
-          <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center">
-            {loadingWards ? <Spinner /> : <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>}
-          </div>
-        </div>
-      </div>
-
-      {(externalPreview || addressPreview) && (
-        <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 flex items-start gap-2">
-          <span className="text-blue-500 shrink-0 mt-0.5">📍</span>
-          <div className="text-sm font-semibold text-blue-700 leading-snug space-y-1">
-            {externalPreview && <p>Gợi ý từ vị trí: {externalPreview}</p>}
-            {addressPreview && <p>Địa chỉ đã chọn: {addressPreview}</p>}
-          </div>
-        </div>
-      )}
-    </div>
-  );
+    );
 }

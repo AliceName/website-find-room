@@ -15,6 +15,9 @@ export type LocationResult = {
     road?: string;
     house_number?: string;
     suburb?: string;
+    province_code?: string;
+    district_code?: string;
+    ward_code?: string;
   };
   // ✅ Kết quả phân tích — MapController dùng cái này để quyết định có lọc 20km không
   isGeographic: boolean;
