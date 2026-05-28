@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { connection } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
 import PostCard from "@/components/rooms/PostCard";
 import {
@@ -62,6 +63,8 @@ const areas = [
 ];
 
 export default async function HomePage() {
+    await connection();
+
     const { data, error } = await supabase
         .from("posts")
         .select(`

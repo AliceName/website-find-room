@@ -213,7 +213,7 @@ export default function PostLocationPicker({
     onReverseGeocode?.(data);
     if (location) onChange(location);
 
-    const nextQuery = [data.address_detail, data.district, data.city].filter(Boolean).join(", ");
+    const nextQuery = [data.address_detail, data.ward || data.district, data.city].filter(Boolean).join(", ");
     setLastQuery(nextQuery);
     setManualPicked(false);
   };
@@ -223,10 +223,10 @@ export default function PostLocationPicker({
   useEffect(() => { setMounted(true); }, []);
 
   const query = useMemo(() => {
-    const parts = [district, city].filter(Boolean);
+    const parts = [ward || district, city].filter(Boolean);
     if (addressDetail.trim()) parts.unshift(addressDetail.trim());
     return parts.join(", ");
-  }, [addressDetail, district, city]);
+  }, [addressDetail, city, district, ward]);
 
   useEffect(() => {
     if (!query || query.length < 5) return;
@@ -481,7 +481,7 @@ export default function PostLocationPicker({
                   <Popup>
                     <div className="space-y-1 text-sm">
                       <p className="font-bold text-gray-800">📍 Vị trí đã chọn</p>
-                      <p className="text-gray-600">{[district, city].filter(Boolean).join(", ") || "Chưa có địa chỉ"}</p>
+                      <p className="text-gray-600">{[ward || district, city].filter(Boolean).join(", ") || "Chưa có địa chỉ"}</p>
                     </div>
                   </Popup>
                 </Marker>

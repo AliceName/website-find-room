@@ -315,9 +315,10 @@ function RoomsContent() {
         const counts = new Map<string, number>();
         posts.forEach((p) => {
             const loc = p.rooms?.locations;
-            if (loc?.district) {
+            const wardOrDistrict = loc?.ward || loc?.district;
+            if (wardOrDistrict) {
                 if (!currentFilters.city || loc.city === currentFilters.city) {
-                    counts.set(loc.district, (counts.get(loc.district) || 0) + 1);
+                    counts.set(wardOrDistrict, (counts.get(wardOrDistrict) || 0) + 1);
                 }
             }
         });
@@ -388,7 +389,10 @@ function RoomsContent() {
             result = result.filter((p) => p.rooms?.locations?.city === filters.city);
         }
         if (filters.district) {
-            result = result.filter((p) => p.rooms?.locations?.district === filters.district);
+            result = result.filter((p) => {
+                const loc = p.rooms?.locations;
+                return (loc?.ward || loc?.district) === filters.district;
+            });
         }
         if (filters.amenities && filters.amenities.length > 0) {
             result = result.filter((p) => {

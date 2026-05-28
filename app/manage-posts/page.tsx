@@ -275,7 +275,7 @@ export default function ManagePostsPage() {
                             const isAvailable = post.rooms?.room_status !== false;
                             const location = post.rooms?.locations;
                             const locationText = location
-                                ? [location.district, location.city].filter(Boolean).join(", ")
+                                ? [location.ward || location.district, location.city].filter(Boolean).join(", ")
                                 : "—";
                             const price = post.rooms?.room_price;
                             const priceText = price

@@ -200,9 +200,9 @@ export default function EditPostPage({ params }: { params: Promise<{ post_id: st
                     room_price: String(room.room_price || ""),
                     room_area: String(room.room_area || ""),
                     city: location?.city || "TP. Hồ Chí Minh",
-                    district: location?.district || "",
+                    district: "",
                     ward: location?.ward || "",
-                    address_detail: room.full_address || room.address_detail || "",
+                    address_detail: room.address_detail || "",
                     room_description: room.room_description || "",
                     vr_url: room.vr_url || "",
                     room_status: room.room_status !== false,
@@ -247,8 +247,21 @@ export default function EditPostPage({ params }: { params: Promise<{ post_id: st
         full_address?: string;
     }) => {
         if (data.city) setForm(prev => ({ ...prev, city: data.city ?? prev.city }));
-        if (data.district) setForm(prev => ({ ...prev, district: data.district ?? prev.district }));
-        if (data.ward) setForm(prev => ({ ...prev, ward: data.ward ?? prev.ward }));
+        if (data.ward) {
+            const normalizedWard = data.ward
+                .replace(/^phường\s+/i, "")
+                .replace(/^xã\s+/i, "")
+                .replace(/^thị trấn\s+/i, "")
+                .trim();
+            setForm(prev => ({ ...prev, district: "", ward: normalizedWard || data.ward || prev.ward }));
+        } else if (data.district) {
+            const normalizedWard = data.district
+                .replace(/^phường\s+/i, "")
+                .replace(/^xã\s+/i, "")
+                .replace(/^thị trấn\s+/i, "")
+                .trim();
+            setForm(prev => ({ ...prev, district: "", ward: normalizedWard || data.district || prev.ward }));
+        }
         if (data.address_detail) {
             setForm(prev => ({ ...prev, address_detail: data.address_detail ?? prev.address_detail }));
             setAddressDetailHint(data.address_detail);
@@ -256,7 +269,7 @@ export default function EditPostPage({ params }: { params: Promise<{ post_id: st
     };
 
     const handleResetPin = async () => {
-        const query = [form.city, form.district, form.ward, form.address_detail].filter(Boolean).join(", ");
+        const query = [form.address_detail, form.ward || form.district, form.city].filter(Boolean).join(", ");
         if (!query) return;
 
         const res = await fetch(`/api/geocode?q=${encodeURIComponent(query)}`);
@@ -291,12 +304,28 @@ export default function EditPostPage({ params }: { params: Promise<{ post_id: st
                 throw new Error(buildValidationMessage(validation.errors));
             }
 
+            let nextLocationId = locationId;
+
             if (locationId) {
-                const { error: locErr } = await supabase
+                const { data: updatedLocation, error: locErr } = await supabase
                     .from("locations")
                     .update({ city: form.city, district: null, ward: form.ward })
-                    .eq("location_id", locationId);
+                    .eq("location_id", locationId)
+                    .select("location_id")
+                    .maybeSingle();
                 if (locErr) throw new Error("Lỗi cập nhật địa điểm: " + locErr.message);
+                nextLocationId = updatedLocation?.location_id ?? null;
+            }
+
+            if (!nextLocationId) {
+                const { data: createdLocation, error: createLocErr } = await supabase
+                    .from("locations")
+                    .insert({ city: form.city, district: null, ward: form.ward })
+                    .select("location_id")
+                    .single();
+                if (createLocErr) throw new Error("Lỗi tạo địa điểm mới: " + createLocErr.message);
+                nextLocationId = createdLocation.location_id;
+                setLocationId(nextLocationId);
             }
 
             const roomTypeLabel = ROOM_TYPES.find(t => t.value === form.room_type)?.label ?? "";
@@ -314,6 +343,7 @@ export default function EditPostPage({ params }: { params: Promise<{ post_id: st
                         room_area: Number(form.room_area),
                         room_description: form.room_description,
                         room_type_id: typeData?.room_type_id ?? null,
+                        location_id: nextLocationId,
                         room_status: form.room_status,
                         vr_url: form.vr_url || null,
                         address_detail: form.address_detail || null,

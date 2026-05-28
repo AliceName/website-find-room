@@ -55,9 +55,11 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ pos
     const amenities = room?.roomamenities?.map(ra => ra.amenities?.amenity_name).filter(Boolean) || [];
 
     const location = room?.locations;
-    const locationText = location
-        ? [location.ward, location.district, location.city].filter(Boolean).join(', ')
-        : 'TP. Hồ Chí Minh';
+    const locationText = room?.full_address || room?.address_detail || (
+        location
+            ? [location.ward, location.district, location.city].filter(Boolean).join(', ')
+            : 'TP. Hồ Chí Minh'
+    );
 
     const lat = Number(room?.latitude);
     const lng = Number(room?.longitude);
