@@ -6,6 +6,7 @@ import { MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from "re
 import "leaflet/dist/leaflet.css";
 import { geocodeAddress } from "@/lib/services/geocode";
 import { findBestAdministrativeMatch, isMeaningfulAdministrativeName } from "@/lib/utils/addressNormalization";
+import { MAP_TILE_CONFIG } from "./mapTiles";
 
 const DEFAULT_CENTER: [number, number] = [10.775060, 106.702191]; // TP.HCM
 const DEFAULT_ZOOM = 15;
@@ -471,7 +472,7 @@ export default function PostLocationPicker({
             zoom={latitude && longitude ? mapZoom : 13}
             style={{ height: "100%", width: "100%", position: "relative", zIndex: 0 }}
           >
-            <TileLayer attribution="&copy; OpenStreetMap" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+            <TileLayer attribution={MAP_TILE_CONFIG.attribution} url={MAP_TILE_CONFIG.url} />
             <ClickToPickLocation onPick={handlePick} />
             {latitude !== null && longitude !== null && (
               <>

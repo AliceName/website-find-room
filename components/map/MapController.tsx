@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 import { useMap } from "react-leaflet";
 import { geocodeAddress } from "@/lib/services/geocode";
 
-const DEFAULT_HCM_CENTER = { lat: 10.8411, lng: 106.8098 };
+const DEFAULT_VIETNAM_OVERVIEW = { lat: 15.35, lng: 111.7, zoom: 6 };
 
 export function MapController({
     filters,
@@ -48,7 +48,7 @@ export function MapController({
                 lastKeyword.current = "";
 
                 // Về lại bài đăng đầu tiên nếu có
-                safeFlyTo(DEFAULT_HCM_CENTER.lat, DEFAULT_HCM_CENTER.lng, 10);
+                safeFlyTo(DEFAULT_VIETNAM_OVERVIEW.lat, DEFAULT_VIETNAM_OVERVIEW.lng, DEFAULT_VIETNAM_OVERVIEW.zoom);
             }
             return;
         }
@@ -63,7 +63,7 @@ export function MapController({
             if (isDescription) {
                 setSearchLocation(null);
                 // Tìm bài đầu tiên khớp với mô tả để bay tới
-                safeFlyTo(DEFAULT_HCM_CENTER.lat, DEFAULT_HCM_CENTER.lng, 10);
+                safeFlyTo(DEFAULT_VIETNAM_OVERVIEW.lat, DEFAULT_VIETNAM_OVERVIEW.lng, DEFAULT_VIETNAM_OVERVIEW.zoom);
                 lastKeyword.current = keyword;
                 return;
             }
@@ -81,7 +81,7 @@ export function MapController({
             } else {
                 setSearchLocation(null);
                 // Nếu không ra địa điểm, bay về bài đầu tiên có trong danh sách đã lọc
-                safeFlyTo(DEFAULT_HCM_CENTER.lat, DEFAULT_HCM_CENTER.lng, 10);
+                safeFlyTo(DEFAULT_VIETNAM_OVERVIEW.lat, DEFAULT_VIETNAM_OVERVIEW.lng, DEFAULT_VIETNAM_OVERVIEW.zoom);
             }
             lastKeyword.current = keyword;
         }, 800); // Tăng lên 800ms để người dùng gõ xong hẳn mới bay

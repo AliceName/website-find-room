@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import AutocompleteInput from "@/components/common/AutocompleteInput";
 
 export default function Navbar() {
     const router = useRouter();
@@ -115,12 +116,13 @@ export default function Navbar() {
                     <form onSubmit={handleSearch} className="hidden max-w-md flex-grow md:block">
                         <div className="flex items-center rounded-2xl bg-slate-100 px-4 py-2.5 transition-all duration-[180ms] ease-[var(--ease-out-quart)] focus-within:bg-white focus-within:ring-4 focus-within:ring-blue-500/10 focus-within:shadow-[0_0_0_1px_rgba(37,99,235,0.14),0_0_0_8px_rgba(37,99,235,0.06)]">
                             <span className="mr-2 text-gray-400 transition-colors duration-[180ms] ease-[var(--ease-out-quart)]">🔍</span>
-                            <input
-                                type="text"
-                                placeholder="Tìm phòng, khu vực..."
+                            <AutocompleteInput
                                 value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="flex-1 bg-transparent text-sm font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none"
+                                onChange={setSearchQuery}
+                                fetchUrl="/api/autocomplete"
+                                placeholder="Tìm phòng, khu vực..."
+                                className="flex-1"
+                                inputClassName="w-full bg-transparent text-sm font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none"
                             />
                         </div>
                     </form>
@@ -186,12 +188,13 @@ export default function Navbar() {
                     <form onSubmit={handleSearch} className="mb-3">
                         <div className="flex items-center bg-gray-50 rounded-2xl py-2 pl-3 pr-1">
                             <span className="text-gray-400 text-lg mr-2">🔍</span>
-                            <input
-                                type="text"
-                                placeholder="Tìm phòng..."
+                            <AutocompleteInput
                                 value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="flex-1 bg-transparent text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none font-medium"
+                                onChange={setSearchQuery}
+                                fetchUrl="/api/autocomplete"
+                                placeholder="Tìm phòng..."
+                                className="flex-1"
+                                inputClassName="w-full bg-transparent text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none font-medium"
                             />
                             <button
                                 type="submit"

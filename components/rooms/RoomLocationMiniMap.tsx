@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type L from "leaflet";
+import { MAP_TILE_CONFIG } from "@/components/map/mapTiles";
 
 interface RoomLocationMiniMapProps {
   lat: number;
@@ -79,10 +80,7 @@ export default function RoomLocationMiniMap({
         doubleClickZoom
         zoomControl
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+        <TileLayer attribution={MAP_TILE_CONFIG.attribution} url={MAP_TILE_CONFIG.url} />
 
         <Marker position={[lat, lng]} icon={roomPinIcon}>
           <Popup>
