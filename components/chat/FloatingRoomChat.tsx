@@ -160,7 +160,6 @@ export default function FloatingRoomChat() {
   const [error, setError] = useState("");
   const listEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const isRoomsPage = pathname === "/rooms";
 
   useEffect(() => {
     if (!open) return;
@@ -264,11 +263,11 @@ export default function FloatingRoomChat() {
   };
 
   return (
-    <div className={`fixed z-[1200] flex flex-col items-end gap-3 ${isRoomsPage ? "bottom-4 right-4" : "bottom-5 right-5 sm:bottom-6 sm:right-6"}`}>
+    <div className="fixed bottom-5 right-5 z-[1200] flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
       {open ? (
         <section
           aria-label="Trợ lý tìm phòng"
-          className={`flex w-[calc(100vw-32px)] flex-col overflow-hidden rounded-2xl border border-sky-100 bg-slate-50 shadow-2xl ${isRoomsPage ? "h-[min(520px,calc(100vh-112px))] max-w-[360px]" : "h-[min(680px,calc(100vh-112px))] max-w-[420px]"}`}
+          className="flex h-[min(680px,calc(100vh-112px))] w-[calc(100vw-40px)] max-w-[420px] flex-col overflow-hidden rounded-2xl border border-sky-100 bg-slate-50 shadow-2xl"
         >
           <div className="flex items-center justify-between gap-3 border-b border-sky-100 bg-white px-4 py-3">
             <div className="flex min-w-0 items-center gap-3">
@@ -433,10 +432,9 @@ export default function FloatingRoomChat() {
         </section>
       ) : null}
 
-      {!open ? (
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => setOpen((value) => !value)}
         className="group flex h-14 items-center gap-3 rounded-2xl bg-sky-600 px-4 text-white shadow-2xl shadow-sky-300 transition hover:bg-sky-700 focus:outline-none focus:ring-4 focus:ring-sky-200"
         aria-expanded={open}
         aria-label={open ? "Đóng trợ lý tìm phòng" : "Mở trợ lý tìm phòng"}
@@ -446,7 +444,6 @@ export default function FloatingRoomChat() {
           Chat tìm phòng
         </span>
       </button>
-      ) : null}
     </div>
   );
 }

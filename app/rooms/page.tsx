@@ -6,26 +6,25 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import {
+    Home,
     ArrowLeft,
-    Bookmark,
-    Search,
-    SlidersHorizontal,
+    Sparkles,
+    MapPinned,
     RotateCcw,
-    X,
 } from "lucide-react";
 
 import { supabase } from "@/lib/supabaseClient";
+import PostCard from "@/components/rooms/PostCard";
 
 import {
-    AutocompleteInput,
     SearchFilter,
     Pagination,
     EmptyState,
     Loader,
+    Badge,
 } from "@/components/common";
 
 import type { SearchFilters } from "@/components/common";
-import type { AutocompleteOption } from "@/components/common";
 import { ROOM_TYPES } from "@/components/common/SearchFilter";
 
 const MapView = dynamic(() => import("@/components/map/MapView"), {
@@ -106,10 +105,8 @@ function RoomsContent() {
     const [posts, setPosts] = useState<PostWithDetails[]>([]);
     const [filtered, setFiltered] = useState<PostWithDetails[]>([]);
     const [loading, setLoading] = useState(true);
-    const [, setIsMapOpen] = useState(true);
+    const [isMapOpen, setIsMapOpen] = useState(true);
     const [isFiltering, setIsFiltering] = useState(false);
-    const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-    const [quickKeyword, setQuickKeyword] = useState("");
     const [mapFocusTarget, setMapFocusTarget] = useState<{
         lat: number;
         lng: number;
@@ -117,7 +114,6 @@ function RoomsContent() {
         postId?: string;
     } | null>(null);
     const [isChatFiltered, setIsChatFiltered] = useState(false);
-    const [mapSelectedCity, setMapSelectedCity] = useState<string | undefined>(undefined);
 
     const [currentFilters, setCurrentFilters] = useState<SearchFilters>({});
     const [allAmenities, setAllAmenities] = useState<
@@ -126,7 +122,7 @@ function RoomsContent() {
 
     // PAGINATION
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 8;
+    const itemsPerPage = 6;
     const totalPages = Math.ceil(filtered.length / itemsPerPage);
     const paginatedPosts = filtered.slice(
         (currentPage - 1) * itemsPerPage,
@@ -136,10 +132,6 @@ function RoomsContent() {
     useEffect(() => {
         fetchData();
     }, []);
-
-    useEffect(() => {
-        setQuickKeyword(currentFilters.keyword ?? "");
-    }, [currentFilters.keyword]);
 
     useEffect(() => {
         const applyChatResults = (payload: ChatRoomResultsPayload | null) => {
@@ -295,6 +287,8 @@ function RoomsContent() {
         }
     };
 
+    // ... (giữ nguyên toàn bộ logic parseRange, cityOptions, districtOptions, amenityOptions, handleSearch, handleReset)
+
     const parseRange = (rangeStr: string | undefined): [number | undefined, number | undefined] => {
         if (!rangeStr || !rangeStr.includes("-")) return [undefined, undefined];
         const [min, max] = rangeStr.split("-");
@@ -341,36 +335,9 @@ function RoomsContent() {
         }));
     }, [allAmenities]);
 
-    const keywordSuggestions = useMemo<AutocompleteOption[]>(() => {
-        const suggestions: AutocompleteOption[] = [];
-        const seen = new Set<string>();
-
-        const add = (value?: string | null, description?: string) => {
-            const text = value?.trim();
-            if (!text) return;
-            const key = text
-                .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "")
-                .toLowerCase();
-            if (seen.has(key)) return;
-            seen.add(key);
-            suggestions.push({ value: text, label: text, description });
-        };
-
-        posts.forEach((post) => {
-            add(post.post_title, "Tin đăng");
-            const loc = post.rooms?.locations;
-            add([loc?.ward || loc?.district, loc?.city].filter(Boolean).join(", "), "Khu vực");
-            add(loc?.city, "Thành phố");
-        });
-
-        return suggestions;
-    }, [posts]);
-
     const handleSearch = (filters: SearchFilters) => {
         setIsFiltering(true);
         setCurrentFilters(filters);
-        setMapSelectedCity(filters.city || undefined);
         setIsChatFiltered(false);
 
         let result = [...posts];
@@ -472,7 +439,6 @@ function RoomsContent() {
         setCurrentPage(1);
         setIsChatFiltered(false);
         setMapFocusTarget(null);
-        setMapSelectedCity(undefined);
     };
 
     const handleResetChatFilter = () => {
@@ -480,21 +446,7 @@ function RoomsContent() {
         setCurrentPage(1);
         setIsChatFiltered(false);
         setMapFocusTarget(null);
-        setMapSelectedCity(undefined);
         window.sessionStorage.removeItem(CHAT_RESULTS_STORAGE_KEY);
-    };
-
-    const handleMapAreaSelect = ({ city }: { city: string }) => {
-        handleSearch({
-            ...currentFilters,
-            city,
-            district: "",
-        });
-    };
-
-    const handleMapAreaClear = () => {
-        const { city, district, ...restFilters } = currentFilters;
-        handleSearch(restFilters);
     };
 
     const handleFocusPostOnMap = (post: PostWithDetails) => {
@@ -518,283 +470,204 @@ function RoomsContent() {
         });
     };
 
-    const handleQuickSearch = () => {
-        handleSearch({
-            ...currentFilters,
-            keyword: quickKeyword.trim(),
-        });
-    };
-
     return (
-        <div className="h-screen overflow-hidden bg-white text-slate-900">
-            <div className="grid h-full grid-cols-1 lg:grid-cols-[40vw_60vw]">
-                <aside className="z-20 flex min-h-0 flex-col border-r border-slate-200 bg-white lg:h-screen">
-                    <div className="flex items-center gap-3 border-b border-slate-100 px-7 py-4">
-                        <Link
-                            href="/"
-                            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-600 transition hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700"
-                            aria-label="Về trang chủ"
+        <div className="relative min-h-screen bg-[#F0F9FF] text-slate-800 overflow-hidden">
+            {/* Background Pattern + Glow */}
+            <div className="fixed inset-0 -z-10">
+                <div
+                    className="absolute inset-0 opacity-40"
+                    style={{
+                        backgroundImage:
+                            "linear-gradient(to right, #bae6fd 1px, transparent 1px), linear-gradient(to bottom, #bae6fd 1px, transparent 1px)",
+                        backgroundSize: "40px 40px",
+                    }}
+                />
+                <div className="absolute left-[-200px] top-[-150px] h-[600px] w-[600px] rounded-full bg-[#7DD3FC]/40 blur-[120px]" />
+                <div className="absolute bottom-[-180px] right-[-180px] h-[550px] w-[550px] rounded-full bg-[#0EA5E9]/30 blur-[130px]" />
+            </div>
+
+            {/* HEADER */}
+            <div className="sticky top-0 z-50 border-b border-sky-100 bg-white/90 backdrop-blur-2xl">
+                <div className="mx-auto flex max-w-screen-2xl items-center justify-between px-5 py-5">
+                    <div className="flex items-center gap-4">
+                        <motion.div
+                            whileHover={{ scale: 1.05 }}
+                            className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#0EA5E9] to-[#7DD3FC] shadow-lg shadow-sky-300"
                         >
-                            <ArrowLeft className="h-5 w-5" />
-                        </Link>
-                        <form
-                            onSubmit={(event) => {
-                                event.preventDefault();
-                                handleQuickSearch();
-                            }}
-                            className="flex-1"
-                        >
-                            <AutocompleteInput
-                                value={quickKeyword}
-                                onChange={setQuickKeyword}
-                                onSelect={(value) => {
-                                    handleSearch({
-                                        ...currentFilters,
-                                        keyword: value.trim(),
-                                    });
-                                }}
-                                suggestions={keywordSuggestions}
-                                fetchUrl="/api/autocomplete"
-                                placeholder="Tìm phòng trọ, căn hộ..."
-                                icon={<Search className="h-5 w-5" />}
-                                inputClassName="h-12 w-full rounded-full border border-slate-200 bg-slate-50 pl-12 pr-4 text-sm font-bold text-slate-900 outline-none transition placeholder:text-slate-500 focus:border-slate-300 focus:bg-white focus:ring-4 focus:ring-slate-100"
-                            />
-                        </form>
-                        <button
-                            type="button"
-                            onClick={() => setIsFilterModalOpen(true)}
-                            className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50"
-                            aria-label="Mở bộ lọc"
-                        >
-                            <SlidersHorizontal className="h-5 w-5" />
-                        </button>
+                            <Home className="h-6 w-6 text-white" />
+                        </motion.div>
+
+                        <div>
+                            <h1 className="text-2xl font-black tracking-tight text-slate-900">
+                                FindRoom
+                            </h1>
+                            <div className="mt-1 flex items-center gap-2">
+                                <Badge variant="info" size="md">
+                                    {filtered.length} kết quả
+                                </Badge>
+                                <span className="flex items-center gap-1 text-xs font-semibold text-[#0EA5E9]">
+                                    <Sparkles className="h-3.5 w-3.5" />
+                                    Smart Search
+                                </span>
+                            </div>
+                        </div>
                     </div>
 
-                    {isChatFiltered ? (
-                        <div className="border-b border-emerald-200 bg-emerald-50 px-4 py-3">
+                    <Link
+                        href="/"
+                        className="group flex items-center gap-2 rounded-2xl border border-sky-200 bg-white px-5 py-3 text-sm font-bold text-slate-600 transition-all hover:-translate-y-0.5 hover:border-[#0EA5E9] hover:text-slate-900"
+                    >
+                        <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+                        Trang chủ
+                    </Link>
+                </div>
+            </div>
+
+            {/* MAIN CONTENT */}
+            <div className="relative z-10 mx-auto max-w-screen-2xl px-4 py-8">
+                {/* FILTER */}
+                <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-8"
+                >
+                    <SearchFilter
+                        onSearch={handleSearch}
+                        onReset={handleReset}
+                        onMapClick={() => setIsMapOpen((prev) => !prev)}
+                        isMapOpen={isMapOpen}
+                        cityOptions={cityOptions}
+                        districtOptions={districtOptions}
+                        amenityOptions={amenityOptions}
+                    />
+                </motion.div>
+
+                {isChatFiltered ? (
+                    <motion.div
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mb-6 rounded-2xl border-2 border-emerald-200 bg-emerald-50 px-4 py-4 shadow-sm"
+                    >
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <p className="text-sm font-semibold text-emerald-900">
                                 Bạn đang xem danh sách phòng được lọc từ chatbot.
                             </p>
                             <button
                                 type="button"
                                 onClick={handleResetChatFilter}
-                                className="mt-3 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-extrabold text-white transition hover:bg-emerald-700"
+                                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-extrabold text-white transition hover:bg-emerald-700 sm:w-auto"
                             >
                                 <RotateCcw className="h-4 w-4" />
-                                Hiện tất cả phòng
+                                Hiện lại tất cả phòng
                             </button>
                         </div>
-                    ) : null}
+                    </motion.div>
+                ) : null}
 
-                    <div className="flex items-center justify-between px-7 py-4">
-                        <p className="text-sm font-bold text-slate-700">
-                            <span className="text-emerald-700">⚡ {Math.min(filtered.length, posts.length).toLocaleString("vi-VN")} tin phù hợp</span>
-                            <span className="mx-2 text-slate-300">·</span>
-                            <span className="text-slate-950">{posts.length.toLocaleString("vi-VN")} kết quả</span>
-                        </p>
-                        {Object.values(currentFilters).some((value) => Array.isArray(value) ? value.length > 0 : Boolean(value)) ? (
-                            <button
-                                type="button"
-                                onClick={handleReset}
-                                className="text-xs font-bold text-slate-500 underline underline-offset-4 transition hover:text-slate-900"
-                            >
-                                Xóa lọc
-                            </button>
-                        ) : null}
-                    </div>
-
-                    <div className={`min-h-0 flex-1 overflow-y-auto px-7 pb-8 transition-opacity ${isFiltering ? "opacity-70" : "opacity-100"}`}>
-                        {loading ? (
-                            <Loader fullScreen={false} text="Đang tìm phòng phù hợp..." />
-                        ) : filtered.length === 0 ? (
-                            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center">
-                                <EmptyState
-                                    icon="🏚️"
-                                    title="Không tìm thấy phòng"
-                                    description="Hãy thử nới lỏng bộ lọc hoặc đổi khu vực"
-                                    action={{ label: "Đặt lại bộ lọc", onClick: handleReset }}
-                                />
-                            </div>
-                        ) : (
-                            <>
-                                <div className="grid grid-cols-1 gap-x-5 gap-y-6 xl:grid-cols-2">
-                                    {paginatedPosts.map((post, index) => (
-                                        <motion.div
-                                            key={post.post_id}
-                                            initial={{ opacity: 0, y: 12 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: index * 0.03 }}
-                                        >
-                                            <div
-                                                onClick={() => handleFocusPostOnMap(post)}
-                                                className="block w-full cursor-pointer rounded-[22px] text-left transition hover:-translate-y-0.5"
-                                            >
-                                                <CompactRoomCard post={post} />
-                                            </div>
-                                        </motion.div>
-                                    ))}
-                                </div>
-
-                                {totalPages > 1 ? (
-                                    <div className="mt-6 flex justify-center pb-4">
-                                        <Pagination
-                                            currentPage={currentPage}
-                                            totalPages={totalPages}
-                                            onPageChange={setCurrentPage}
-                                            canPreviousPage={currentPage > 1}
-                                            canNextPage={currentPage < totalPages}
-                                        />
-                                    </div>
-                                ) : null}
-                            </>
-                        )}
-                    </div>
-                </aside>
-
-                <main id="rooms-map-section" className="relative min-h-[520px] bg-white p-3 lg:h-screen">
-                    <div className="h-full w-full overflow-hidden rounded-[18px]">
-                        <MapView
-                            posts={filtered}
-                            areaPosts={posts}
-                            filters={currentFilters}
-                            focusTarget={mapFocusTarget ?? ((focusPostId && focusLat !== null && focusLng !== null) ? { lat: focusLat, lng: focusLng, title: focusTitle, postId: focusPostId } : (focusLat !== null && focusLng !== null ? { lat: focusLat, lng: focusLng, title: focusTitle } : null))}
-                            openRoutePanel={openRoute}
-                            selectedAreaCity={mapSelectedCity ?? currentFilters.city}
-                            onAreaSelect={handleMapAreaSelect}
-                            onAreaClear={handleMapAreaClear}
-                        />
-                    </div>
-                </main>
-            </div>
-
-            <AnimatePresence>
-                {isFilterModalOpen ? (
-                    <motion.div
-                        className="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
+                {isChatFiltered ? (
+                    <button
+                        type="button"
+                        onClick={handleResetChatFilter}
+                        className="fixed bottom-5 left-4 z-[1100] inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-extrabold text-white shadow-xl shadow-emerald-300 transition hover:bg-emerald-700 sm:bottom-6 sm:left-6"
                     >
+                        <RotateCcw className="h-4 w-4" />
+                        Hiện tất cả phòng
+                    </button>
+                ) : null}
+
+                {/* MAP */}
+                <AnimatePresence>
+                    {isMapOpen && (
                         <motion.div
-                            className="max-h-[86vh] w-[min(720px,calc(100vw-2rem))] overflow-hidden rounded-3xl bg-white shadow-2xl"
-                            initial={{ opacity: 0, y: 24, scale: 0.98 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: 16, scale: 0.98 }}
+                            id="rooms-map-section"
+                            initial={{ opacity: 0, y: -12, height: 0 }}
+                            animate={{ opacity: 1, y: 0, height: 560 }}
+                            exit={{ opacity: 0, y: -12, height: 0 }}
+                            transition={{ duration: 0.35 }}
+                            className="mb-10 overflow-hidden rounded-[2.5rem] border border-sky-100 bg-white shadow-2xl"
                         >
-                            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsFilterModalOpen(false)}
-                                    className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-700 transition hover:bg-slate-100"
-                                    aria-label="Đóng bộ lọc"
-                                >
-                                    <X className="h-5 w-5" />
-                                </button>
-                                <h2 className="text-lg font-black text-slate-950">Bộ lọc</h2>
-                                <span className="h-9 w-9" />
+                            <div className="flex flex-col gap-3 border-b border-sky-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-50 text-[#0EA5E9]">
+                                        <MapPinned className="h-5 w-5" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-lg font-black text-slate-900">Bản đồ phòng trọ</h2>
+                                        <p className="text-sm text-slate-500">Khám phá phòng ngay trên bản đồ với khung nhìn lớn hơn</p>
+                                    </div>
+                                </div>
+                                <span className="inline-flex w-fit items-center rounded-full bg-sky-50 px-4 py-2 text-xs font-bold text-[#0EA5E9]">
+                                    {filtered.length} phòng đang hiển thị
+                                </span>
                             </div>
-                            <div className="max-h-[calc(86vh-73px)] overflow-y-auto p-5">
-                                <SearchFilter
-                                    key={`${currentFilters.keyword ?? ""}|${currentFilters.city ?? ""}|${currentFilters.district ?? ""}|modal`}
-                                    onSearch={(filters) => {
-                                        handleSearch(filters);
-                                        setQuickKeyword(filters.keyword ?? "");
-                                    }}
-                                    onReset={handleReset}
-                                    onMapClick={() => setIsMapOpen(true)}
-                                    isMapOpen={true}
-                                    cityOptions={cityOptions}
-                                    districtOptions={districtOptions}
-                                    amenityOptions={amenityOptions}
-                                    keywordSuggestions={keywordSuggestions}
-                                    selectedFilters={currentFilters}
+                            <div className="h-[500px] p-4">
+                                <MapView
+                                    posts={filtered}
+                                    filters={currentFilters}
+                                    focusTarget={mapFocusTarget ?? ((focusPostId && focusLat !== null && focusLng !== null) ? { lat: focusLat, lng: focusLng, title: focusTitle, postId: focusPostId } : (focusLat !== null && focusLng !== null ? { lat: focusLat, lng: focusLng, title: focusTitle } : null))}
+                                    openRoutePanel={openRoute}
                                 />
                             </div>
                         </motion.div>
-                    </motion.div>
-                ) : null}
-            </AnimatePresence>
-        </div>
-    );
-}
+                    )}
+                </AnimatePresence>
 
-function CompactRoomCard({ post }: { post: PostWithDetails }) {
-    const thumbnail =
-        post.rooms?.roomimages?.find((image) => image.is_360 === false)?.image_url ||
-        post.rooms?.roomimages?.[0]?.image_url ||
-        "/placeholder-room.jpg";
-    const price = post.rooms?.room_price
-        ? post.rooms.room_price >= 1_000_000
-            ? `${(post.rooms.room_price / 1_000_000).toFixed(1).replace(/\.0$/, "")} triệu/tháng`
-            : `${post.rooms.room_price.toLocaleString("vi-VN")} đ/tháng`
-        : "Liên hệ";
-    const location = post.rooms?.locations;
-    const locationText = location
-        ? [location.ward || location.district, location.city].filter(Boolean).join(", ")
-        : "Chưa cập nhật vị trí";
-    const roomType = post.rooms?.room_types?.room_type_name ?? "Phòng";
-    const hasVR = !!(post.rooms?.vr_url || post.rooms?.roomimages?.some((image) => image.is_360));
-
-    return (
-        <article className="group overflow-hidden rounded-[22px] bg-white transition">
-            <div className="relative aspect-[1.22] overflow-hidden rounded-[18px] bg-slate-100">
-                {thumbnail !== "/placeholder-room.jpg" ? (
-                    <img
-                        src={thumbnail}
-                        alt={post.post_title}
-                        className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-                    />
-                ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-slate-50 text-slate-400">
-                        <div className="text-center">
-                            <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-white text-3xl shadow-sm">⌂</div>
-                            <p className="text-sm font-bold text-slate-600">Cho thuê</p>
+                {/* RESULTS */}
+                <div className={`transition-all duration-300 ${isFiltering ? "opacity-70" : "opacity-100"}`}>
+                    {loading ? (
+                        <Loader fullScreen={false} text="Đang tìm phòng phù hợp..." />
+                    ) : filtered.length === 0 ? (
+                        <div className="rounded-[2rem] border border-sky-100 bg-white p-12 text-center">
+                            <EmptyState
+                                icon="🏚️"
+                                title="Không tìm thấy phòng"
+                                description="Hãy thử nới lỏng bộ lọc hoặc đổi khu vực"
+                                action={{
+                                    label: "Đặt lại bộ lọc",
+                                    onClick: handleReset,
+                                }}
+                            />
                         </div>
-                    </div>
-                )}
-                <span className="absolute left-3 top-3 max-w-[calc(100%-4.5rem)] truncate rounded-full bg-white/95 px-3 py-1 text-xs font-black text-slate-950 shadow-sm">
-                    {roomType}
-                </span>
-                <button
-                    type="button"
-                    onClick={(event) => event.stopPropagation()}
-                    className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-slate-600 shadow-sm transition hover:bg-white hover:text-slate-950"
-                    aria-label="Lưu phòng"
-                >
-                    <Bookmark className="h-5 w-5" />
-                </button>
-                {hasVR ? (
-                    <span className="absolute bottom-3 left-3 rounded-full bg-purple-600 px-2.5 py-1 text-[10px] font-black text-white shadow-sm">
-                        VR
-                    </span>
-                ) : null}
-            </div>
+                    ) : (
+                        <>
+                            <motion.div
+                                layout
+                                className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3"
+                            >
+                                {paginatedPosts.map((post, index) => (
+                                    <motion.div
+                                        key={post.post_id}
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: index * 0.04 }}
+                                    >
+                                        <button
+                                            type="button"
+                                            onClick={() => handleFocusPostOnMap(post)}
+                                            className="block w-full text-left"
+                                        >
+                                            <PostCard post={post as any} />
+                                        </button>
+                                    </motion.div>
+                                ))}
+                            </motion.div>
 
-            <div className="px-0 py-3">
-                <div className="mb-1 flex items-start justify-between gap-3">
-                    <h3 className="line-clamp-2 min-h-[42px] text-base font-black leading-snug text-slate-950">
-                        {post.post_title}
-                    </h3>
-                    <span className="shrink-0 text-xs font-bold text-slate-500">★ {post.view_count ?? 0}</span>
-                </div>
-                <p className="line-clamp-1 text-sm font-bold text-slate-500">{locationText}</p>
-                <div className="mt-1 flex min-w-0 items-center gap-2 text-sm font-semibold text-slate-500">
-                    <span>{post.rooms?.room_area ?? "--"}m²</span>
-                    <span className="h-1 w-1 rounded-full bg-slate-300" />
-                    <span className="truncate">{roomType}</span>
-                </div>
-                <div className="mt-2 flex items-center justify-between gap-3">
-                    <p className="text-base font-black text-slate-950 underline decoration-1 underline-offset-2">{price}</p>
-                    <Link
-                        href={`/rooms/${post.post_id}`}
-                        onClick={(event) => event.stopPropagation()}
-                        className="shrink-0 rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700 transition hover:bg-blue-100"
-                    >
-                        Chi tiết
-                    </Link>
+                            {totalPages > 1 && (
+                                <div className="mt-12 flex justify-center pb-12">
+                                    <Pagination
+                                        currentPage={currentPage}
+                                        totalPages={totalPages}
+                                        onPageChange={setCurrentPage}
+                                        canPreviousPage={currentPage > 1}
+                                        canNextPage={currentPage < totalPages}
+                                    />
+                                </div>
+                            )}
+                        </>
+                    )}
                 </div>
             </div>
-        </article>
+        </div>
     );
 }
 

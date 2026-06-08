@@ -13,7 +13,6 @@
     "@photo-sphere-viewer/core": "^5.14.1",
     "@supabase/auth-helpers-nextjs": "^0.15.0",
     "@supabase/supabase-js": "^2.103.0",
-    "@turf/union": "^7.3.5",
     "framer-motion": "^12.39.0",
     "franc": "^6.2.0",
     "leaflet": "^1.9.4",
